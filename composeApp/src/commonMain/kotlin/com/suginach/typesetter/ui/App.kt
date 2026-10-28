@@ -570,6 +570,30 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
             Text("עמוד ${idx + 1}", fontSize = 9.sp, color = androidx.compose.ui.graphics.Color.Gray)
             PagePreview(page, settings)
         }
+
+        // הערות סיום
+        val totalEndnotes = result.endnotes.values.sumOf { it.size }
+        if (totalEndnotes > 0) {
+            Spacer(Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
+                ),
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("📋 הערות סיום ($totalEndnotes)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    for ((partIdx, entries) in result.endnotes) {
+                        if (entries.isEmpty()) continue
+                        Text("— חלק ${partIdx + 1} —", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                        for (entry in entries) {
+                            Text("${entry.marker}. ${entry.text}", fontSize = 10.sp, modifier = Modifier.padding(vertical = 1.dp))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
