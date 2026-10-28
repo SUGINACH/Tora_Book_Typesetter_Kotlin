@@ -14,4 +14,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "ToraBookTypesetter"
-include(":composeApp")
+include(":composeapp")

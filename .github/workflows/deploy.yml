@@ -36,18 +36,18 @@ jobs:
         run: gradle wrapper --gradle-version 8.13
 
       - name: Build wasmJs
-        run: ./gradlew :composeApp:wasmJsBrowserDistribution --no-daemon
+        run: ./gradlew :composeapp:wasmJsBrowserDistribution --no-daemon
 
       - name: Copy fonts and ornaments to dist
         run: |
-          cp -r fonts composeApp/build/dist/wasmJs/productionExecutable/
-          cp -r ornaments composeApp/build/dist/wasmJs/productionExecutable/
-          cp -r text_files_for_typesetter_tests composeApp/build/dist/wasmJs/productionExecutable/
+          cp -r fonts composeapp/build/dist/wasmJs/productionExecutable/
+          cp -r ornaments composeapp/build/dist/wasmJs/productionExecutable/
+          cp -r text_files_for_typesetter_tests composeapp/build/dist/wasmJs/productionExecutable/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: composeApp/build/dist/wasmJs/productionExecutable
+          path: composeapp/build/dist/wasmJs/productionExecutable
 
   deploy:
     needs: build
