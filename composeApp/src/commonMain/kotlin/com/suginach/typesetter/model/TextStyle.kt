@@ -66,10 +66,18 @@ data class PageTypeDefinition(
     val id: String,
     val name: String,
     val anchor: PageAnchor = PageAnchor.AFTER_ALL,
-    val background: BackgroundSpec? = null,
+    val background: SerializableBackgroundSpec? = null,
     val textBoxes: List<TextBoxSpec> = emptyList(),
     val images: List<ImageSpec> = emptyList(),
     val showPageNumber: Boolean = false,
+)
+
+@Serializable
+data class SerializableBackgroundSpec(
+    val mode: String = "none",
+    val color: String? = null,
+    val imageUrl: String? = null,
+    val opacity: Double = 1.0,
 )
 
 enum class PageAnchor {

@@ -154,7 +154,6 @@ class PageFiller(
                         lines = lines,
                         isFirstWordEnlarged = isFirstWord,
                         firstWord = firstWord,
-                        sideNote = null,
                         customStyleId = token.customStyleId,
                         footnoteMarkers = footnoteMarkers,
                     )
