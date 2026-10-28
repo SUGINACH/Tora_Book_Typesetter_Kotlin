@@ -24,8 +24,9 @@ enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 /**
  * גופן עברי ראשי — Frank-Ruehl הנטען דרך @font-face ב-index.html.
  * Skiko ב-wasm משתמש בגופנים של הדפדפן, לכן שם הגופן חייב להתאים ל-@font-face.
+ * משתמשים ב-FontFamily(Font(name)) כי FontFamily(String) protected.
  */
-val hebrewFont = FontFamily("Frank-Ruehl")
+val hebrewFont = FontFamily(Font("Frank-Ruehl"))
 
 @Composable
 fun App() {
@@ -759,12 +760,12 @@ private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
             HeadingPreview(block.heading)
         }
         is TextBlock.Divider -> {
-            // מחלק עיטורי — לסוף פרק 7
+            // מחלק עיטורי — לסוף קטע של כותרת 2 (לפני כותרת 2 הבאה)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.Center,
             ) {
-                val count = if (block.isChapterEnd) 3 else 1
+                val count = if (block.isChapterEnd) settings.chapterEndOrnamentCount else 1
                 repeat(count) {
                     Text("✦", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 2.dp))
                 }

@@ -89,7 +89,7 @@ data class TypesetterSettings(
     val firstWordWindowChars: Int = 3,
     val dibburHamatchilEnabled: Boolean = false,
 
-    // עיטורי סוף פרק 7
+    // עיטורי סוף פרק — בסיום תוכן של כותרת 2, לפני כותרת 2 הבאה
     val chapterEndOrnament: String = "stars",
     val chapterEndOrnamentCount: Int = 3,
 

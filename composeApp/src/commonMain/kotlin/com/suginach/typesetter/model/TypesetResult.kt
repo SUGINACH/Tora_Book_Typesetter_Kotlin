@@ -95,7 +95,7 @@ sealed class TextBlock {
     /** כותרת חוצה טורים (full-width) — לכותרות 2/3 */
     data class HeadingSpan(val heading: Heading) : TextBlock()
 
-    /** מחלק עיטורי — לסוף פרק 7 */
+    /** מחלק עיטורי — לסוף קטע של כותרת 2 (לפני כותרת 2 הבאה או בסוף חלק) */
     data class Divider(val ornament: String, val isChapterEnd: Boolean = false) : TextBlock()
 }
 
@@ -207,8 +207,6 @@ data class Heading(
     val ornamentLeft: String? = null,
     val alignment: TextAlignment = TextAlignment.CENTER,
     val customStyleId: String? = null,
-    /** עיטור מיוחד לסוף פרק 7 */
-    val isChapterEnd: Boolean = false,
 )
 
 /**

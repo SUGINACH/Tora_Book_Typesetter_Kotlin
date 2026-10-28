@@ -102,6 +102,15 @@ class PageFiller(
                             // סגירת TwoColumn הנוכחי
                             flushTwoColumnIfAny()
 
+                            // עיטור סוף פרק — לפני כותרת 2 חדשה, אם יש תוכן קודם
+                            // (סיום הקטע של כותרת 2 הקודמת)
+                            if (level == 2 && currentBlocks.isNotEmpty() && settings.chapterEndOrnament != "none") {
+                                currentBlocks.add(TextBlock.Divider(
+                                    ornament = settings.chapterEndOrnament,
+                                    isChapterEnd = true,
+                                ))
+                            }
+
                             // יצירת הכותרת
                             val heading = createHeading(token, settings)
 
@@ -307,7 +316,6 @@ class PageFiller(
 
     private fun createHeading(token: Token.HeadingToken, settings: TypesetterSettings): Heading {
         val level = token.level
-        val isChapterEnd = level == 7
         return Heading(
             level = level,
             text = token.text,
@@ -322,7 +330,6 @@ class PageFiller(
             ornamentBottom = if (level == 2) settings.h2OrnamentBottom else null,
             ornamentRight = if (level == 3) settings.h3OrnamentRight else null,
             ornamentLeft = if (level == 3) settings.h3OrnamentLeft else null,
-            isChapterEnd = isChapterEnd,
         )
     }
 
