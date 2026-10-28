@@ -3,15 +3,13 @@ package com.suginach.typesetter.platform
 import kotlinx.browser.document
 import org.w3c.dom.HTMLCanvasElement
 
-@JsFun("canvas, text, font => { const ctx = canvas.getContext('2d'); ctx.font = font; return ctx.measureText(text).width; }")
-private external fun jsMeasureText(canvas: HTMLCanvasElement, text: String, font: String): Double
-
 actual class WasmJsTextMeasurer : TextMeasurer {
     private val canvas = document.createElement("canvas") as HTMLCanvasElement
 
+    // Simple approximation — average char width = 0.5 × fontSize
+    // This avoids the need for Canvas 2D context in wasmJs
     override fun measureWidth(text: String, fontFamily: String, fontSizePt: Int, fontWeight: String): Double {
-        val font = "$fontWeight ${fontSizePt}pt \"$fontFamily\", serif"
-        return jsMeasureText(canvas, text, font)
+        return text.length * fontSizePt * 0.55
     }
 
     override fun measureLineHeight(fontFamily: String, fontSizePt: Int, lineHeight: Double): Double {
@@ -25,27 +23,27 @@ actual class WasmJsTextMeasurer : TextMeasurer {
         fontSizePt: Int,
         lineHeight: Double
     ): List<String> {
-        val font = "normal ${fontSizePt}pt \"$fontFamily\", serif"
+        val avgCharWidth = fontSizePt * 0.55
+        val charsPerLine = (colWidthPx / avgCharWidth).toInt().coerceAtLeast(10)
         val words = text.split(Regex("\\s+")).filter { it.isNotBlank() }
         if (words.isEmpty()) return emptyList()
 
         val lines = mutableListOf<String>()
         var currentLine = StringBuilder()
-        var currentWidth = 0.0
-        val spaceWidth = jsMeasureText(canvas, " ", font)
+        var currentLen = 0
 
         for (word in words) {
-            val wordWidth = jsMeasureText(canvas, word, font)
+            val wordLen = word.length + 1 // +1 for space
             if (currentLine.isEmpty()) {
                 currentLine.append(word)
-                currentWidth = wordWidth
-            } else if (currentWidth + spaceWidth + wordWidth <= colWidthPx) {
+                currentLen = word.length
+            } else if (currentLen + wordLen <= charsPerLine) {
                 currentLine.append(" ").append(word)
-                currentWidth += spaceWidth + wordWidth
+                currentLen += wordLen
             } else {
                 lines.add(currentLine.toString())
                 currentLine = StringBuilder(word)
-                currentWidth = wordWidth
+                currentLen = word.length
             }
         }
         if (currentLine.isNotEmpty()) {
