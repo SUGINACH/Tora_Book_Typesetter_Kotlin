@@ -202,43 +202,209 @@ private fun SettingsTab(settings: TypesetterSettings, onSettingsChange: (Typeset
     ) {
         Text("⚙️ הגדרות", fontSize = 16.sp, fontWeight = FontWeight.Bold)
 
-        // גוף הטקסט
+        // כפתור איפוס
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            OutlinedButton(onClick = { onSettingsChange(TypesetterSettings.default()) }) {
+                Text("↺ איפוס לברירת מחדל", fontSize = 10.sp)
+            }
+        }
+
+        // גוף הטקסט — ניתן לעריכה
         SettingsSection("גוף הטקסט") {
-            SettingRow("גופן") { Text(settings.bodyFont) }
-            SettingRow("גודל (pt)") { Text("${settings.bodySize}") }
-            SettingRow("ריווח שורות") { Text("${settings.bodyLineHeight}") }
+            IntSettingRow("גודל (pt)", settings.bodySize, 8..24) { v ->
+                onSettingsChange(settings.copy(bodySize = v))
+            }
+            DoubleSettingRow("ריווח שורות", settings.bodyLineHeight, 1.0..2.0, 0.05) { v ->
+                onSettingsChange(settings.copy(bodyLineHeight = v))
+            }
+            SettingRow("גופן") { Text(settings.bodyFont, fontSize = 10.sp) }
         }
 
         // הגדרות הערות
         SettingsSection("הערות") {
-            SettingRow("תו פתיחה") { Text(settings.footnoteDelimOpen) }
-            SettingRow("תו סגירה") { Text(settings.footnoteDelimClose) }
-            SettingRow("סגנון מספור") { Text(settings.noteNumberingStyle) }
-            SettingRow("טורים") { Text("${settings.footnoteColumns}") }
+            StringSettingRow("תו פתיחה", settings.footnoteDelimOpen) { v ->
+                onSettingsChange(settings.copy(footnoteDelimOpen = v))
+            }
+            StringSettingRow("תו סגירה", settings.footnoteDelimClose) { v ->
+                onSettingsChange(settings.copy(footnoteDelimClose = v))
+            }
+            DropdownSettingRow("סגנון מספור", settings.noteNumberingStyle, listOf("gematria", "arabic", "alpha")) { v ->
+                onSettingsChange(settings.copy(noteNumberingStyle = v))
+            }
+            IntSettingRow("טורים", settings.footnoteColumns, 1..3) { v ->
+                onSettingsChange(settings.copy(footnoteColumns = v))
+            }
         }
 
         // איכות עימוד
         SettingsSection("איכות עימוד") {
-            SettingRow("מניעת יתומות/אלמנות") { Text(if (settings.avoidWidowsOrphans) "כן" else "לא") }
-            SettingRow("איזון סוף-פרק") { Text(if (settings.balanceChapterEnd) "כן" else "לא") }
+            BooleanSettingRow("מניעת יתומות/אלמנות", settings.avoidWidowsOrphans) { v ->
+                onSettingsChange(settings.copy(avoidWidowsOrphans = v))
+            }
+            BooleanSettingRow("איזון סוף-פרק", settings.balanceChapterEnd) { v ->
+                onSettingsChange(settings.copy(balanceChapterEnd = v))
+            }
         }
 
         // כותרות
-        SettingsSection("כותרות (0-7)") {
+        SettingsSection("כותרות (0-7) — מצב עימוד") {
+            val modes = listOf("inline_2col", "new_page_1col", "span_1col", "sub_shaar", "side_note")
             for (level in 0..7) {
-                SettingRow("כותרת $level") {
-                    Text("${settings.headingModes[level] ?: "inline_2col"} | ${settings.headingSizes[level] ?: 12}pt")
+                DropdownSettingRow(
+                    "כותרת $level",
+                    settings.headingModes[level] ?: "inline_2col",
+                    modes,
+                ) { v ->
+                    val newModes = settings.headingModes.toMutableMap()
+                    newModes[level] = v
+                    onSettingsChange(settings.copy(headingModes = newModes))
                 }
             }
         }
 
         // גריד
         SettingsSection("גריד וטיפוגרפיה") {
-            SettingRow("גודל עמוד") { Text("${settings.pageSizeWidth}×${settings.pageSizeHeight}mm") }
-            SettingRow("רוחב טור (%)") { Text("${settings.propCol}") }
-            SettingRow("שוליים (%)") { Text("${settings.propMargin}") }
-            SettingRow("מרזב (%)") { Text("${settings.propGutter}") }
-            SettingRow("פורמט מספור") { Text(settings.pageNumFormat) }
+            DropdownSettingRow("גודל עמוד", "${settings.pageSizeWidth.toInt()}×${settings.pageSizeHeight.toInt()}mm",
+                listOf("148×210mm (A5)", "210×297mm (A4)", "176×250mm (B5)")) { v ->
+                val (w, h) = when {
+                    v.startsWith("148") -> 148.0 to 210.0
+                    v.startsWith("176") -> 176.0 to 250.0
+                    else -> 210.0 to 297.0
+                }
+                onSettingsChange(settings.copy(pageSizeWidth = w, pageSizeHeight = h))
+            }
+            DoubleSettingRow("רוחב טור (%)", settings.propCol, 20.0..50.0, 1.0) { v ->
+                onSettingsChange(settings.copy(propCol = v))
+            }
+            DoubleSettingRow("שוליים (%)", settings.propMargin, 3.0..15.0, 0.5) { v ->
+                onSettingsChange(settings.copy(propMargin = v))
+            }
+            DoubleSettingRow("מרזב (%)", settings.propGutter, 1.0..5.0, 0.5) { v ->
+                onSettingsChange(settings.copy(propGutter = v))
+            }
+            DropdownSettingRow("פורמט מספור", settings.pageNumFormat,
+                listOf("gematria", "page_gematria", "numeric")) { v ->
+                onSettingsChange(settings.copy(pageNumFormat = v))
+            }
+        }
+    }
+}
+
+@Composable
+private fun IntSettingRow(label: String, value: Int, range: IntRange, onChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, fontSize = 10.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(
+                onClick = { if (value > range.first) onChange(value - 1) },
+                enabled = value > range.first,
+                modifier = Modifier.padding(2.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
+            ) { Text("−", fontSize = 10.sp) }
+            Text("$value", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp))
+            OutlinedButton(
+                onClick = { if (value < range.last) onChange(value + 1) },
+                enabled = value < range.last,
+                modifier = Modifier.padding(2.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
+            ) { Text("+", fontSize = 10.sp) }
+        }
+    }
+}
+
+@Composable
+private fun DoubleSettingRow(label: String, value: Double, range: ClosedFloatingPointRange<Double>, step: Double, onChange: (Double) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, fontSize = 10.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(
+                onClick = { if (value > range.start) onChange(((value - step) * 100).toInt() / 100.0) },
+                enabled = value > range.start,
+                modifier = Modifier.padding(2.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
+            ) { Text("−", fontSize = 10.sp) }
+            Text("%.2f".format(value), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp))
+            OutlinedButton(
+                onClick = { if (value < range.endInclusive) onChange(((value + step) * 100).toInt() / 100.0) },
+                enabled = value < range.endInclusive,
+                modifier = Modifier.padding(2.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
+            ) { Text("+", fontSize = 10.sp) }
+        }
+    }
+}
+
+@Composable
+private fun BooleanSettingRow(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, fontSize = 10.sp)
+        Switch(checked = value, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun StringSettingRow(label: String, value: String, onChange: (String) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, fontSize = 10.sp)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onChange,
+            modifier = Modifier.width(60.dp),
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 10.sp),
+            singleLine = true,
+        )
+    }
+}
+
+@Composable
+private fun DropdownSettingRow(label: String, value: String, options: List<String>, onChange: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, fontSize = 10.sp)
+        Box {
+            OutlinedButton(
+                onClick = { expanded = true },
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Text(value, fontSize = 10.sp)
+            }
+            androidx.compose.material3.DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                for (opt in options) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(opt, fontSize = 10.sp) },
+                        onClick = {
+                            onChange(opt)
+                            expanded = false
+                        },
+                    )
+                }
+            }
         }
     }
 }
