@@ -126,13 +126,12 @@ class PageFiller(
                     // ניתוח הערות שוליים
                     val footnoteMarkers = mutableListOf<FootnoteMarker>()
                     var displayText = token.rawText
-                    var footnoteIdx = 0
                     for (inline in token.inlines) {
                         if (inline is InlineSegment.Footnote) {
                             footnoteCounter++
                             val marker = gematria.toGematriaWithGeresh(footnoteCounter)
                             footnoteQueue.add(FootnoteEntry(marker, inline.content))
-                            footnoteMarkers.add(FootnoteMarker(marker, footnoteIdx))
+                            footnoteMarkers.add(FootnoteMarker(marker, footnoteMarkers.size))
                         }
                     }
 
@@ -149,35 +148,74 @@ class PageFiller(
                         displayText.split(Regex("\\s+")).take(settings.firstWordCount).joinToString(" ")
                     } else null
 
-                    val para = Paragraph(
-                        text = displayText,
-                        lines = lines,
-                        isFirstWordEnlarged = isFirstWord,
-                        firstWord = firstWord,
-                        customStyleId = token.customStyleId,
-                        footnoteMarkers = footnoteMarkers,
-                    )
+                    // חלוקת השורות בין הטורים/עמודים — תומך בפיצול פסקה ארוכה
+                    var remainingLines = lines
+                    var isFirstChunk = true
+                    while (remainingLines.isNotEmpty()) {
+                        val spaceInRight = maxLinesPerCol - currentRightLines
+                        val spaceInLeft = maxLinesPerCol - currentLeftLines
 
-                    // הוספה לטור המתאים
-                    if (currentRightLines + lines.size > maxLinesPerCol) {
-                        if (currentLeftLines + lines.size > maxLinesPerCol) {
-                            // עמוד חדש
-                            pages.add(createPage(
-                                currentPageNum++, settings, metadata,
-                                currentRightParas, currentLeftParas,
-                                footnoteQueue.toList()
-                            ))
-                            currentRightParas = mutableListOf()
-                            currentLeftParas = mutableListOf()
-                            currentRightLines = 0
-                            currentLeftLines = 0
-                            footnoteQueue.clear()
+                        when {
+                            // מקום בטור ימני
+                            remainingLines.size <= spaceInRight -> {
+                                val para = buildParagraphChunk(
+                                    displayText, remainingLines, isFirstChunk, isFirstWord, firstWord,
+                                    token.customStyleId, footnoteMarkers, isLast = true,
+                                )
+                                currentRightParas.add(para)
+                                currentRightLines += remainingLines.size
+                                remainingLines = emptyList()
+                            }
+                            // מקום בטור שמאלי
+                            remainingLines.size <= spaceInLeft -> {
+                                val para = buildParagraphChunk(
+                                    displayText, remainingLines, isFirstChunk, isFirstWord, firstWord,
+                                    token.customStyleId, footnoteMarkers, isLast = true,
+                                )
+                                currentLeftParas.add(para)
+                                currentLeftLines += remainingLines.size
+                                remainingLines = emptyList()
+                            }
+                            // אין מקום מספיק באף טור — צריך לפצל
+                            else -> {
+                                if (spaceInRight >= 2) {
+                                    // מילוי הטור הימני
+                                    val chunk = remainingLines.take(spaceInRight)
+                                    val para = buildParagraphChunk(
+                                        displayText, chunk, isFirstChunk, isFirstWord, firstWord,
+                                        token.customStyleId, footnoteMarkers, isLast = false,
+                                    )
+                                    currentRightParas.add(para)
+                                    currentRightLines += chunk.size
+                                    remainingLines = remainingLines.drop(chunk.size)
+                                    isFirstChunk = false
+                                } else if (spaceInLeft >= 2) {
+                                    // מילוי הטור השמאלי
+                                    val chunk = remainingLines.take(spaceInLeft)
+                                    val para = buildParagraphChunk(
+                                        displayText, chunk, isFirstChunk, isFirstWord, firstWord,
+                                        token.customStyleId, footnoteMarkers, isLast = false,
+                                    )
+                                    currentLeftParas.add(para)
+                                    currentLeftLines += chunk.size
+                                    remainingLines = remainingLines.drop(chunk.size)
+                                    isFirstChunk = false
+                                } else {
+                                    // שני הטורים מלאים — עמוד חדש
+                                    pages.add(createPage(
+                                        currentPageNum++, settings, metadata,
+                                        currentRightParas, currentLeftParas,
+                                        footnoteQueue.toList()
+                                    ))
+                                    currentRightParas = mutableListOf()
+                                    currentLeftParas = mutableListOf()
+                                    currentRightLines = 0
+                                    currentLeftLines = 0
+                                    footnoteQueue.clear()
+                                    // אם הפסקה עצמה ארוכה מ-maxLinesPerCol, נפצל אותה על פני מספר עמודים
+                                }
+                            }
                         }
-                        currentLeftParas.add(para)
-                        currentLeftLines += lines.size
-                    } else {
-                        currentRightParas.add(para)
-                        currentRightLines += lines.size
                     }
                 }
             }
@@ -204,6 +242,34 @@ class PageFiller(
             ornamentBottom = if (token.level == 2) settings.h2OrnamentBottom else null,
             ornamentRight = if (token.level == 3) settings.h3OrnamentRight else null,
             ornamentLeft = if (token.level == 3) settings.h3OrnamentLeft else null,
+        )
+    }
+
+    /**
+     * בונה חתיכת פסקה — או פסקה שלמה, או חלק מפסקה שפוצלה בין טורים/עמודים.
+     *
+     * @param isFirstChunk האם זה החלק הראשון של הפסקה (מציג firstWord מוגדל)
+     * @param isLast האם זה החלק האחרון (מסמן סוף פסקה)
+     */
+    private fun buildParagraphChunk(
+        fullText: String,
+        chunkLines: List<String>,
+        isFirstChunk: Boolean,
+        isFirstWordEnlarged: Boolean,
+        firstWord: String?,
+        customStyleId: String?,
+        footnoteMarkers: List<FootnoteMarker>,
+        isLast: Boolean,
+    ): Paragraph {
+        return Paragraph(
+            text = fullText,
+            lines = chunkLines,
+            isFirstWordEnlarged = isFirstChunk && isFirstWordEnlarged,
+            firstWord = if (isFirstChunk) firstWord else null,
+            isContinuation = !isFirstChunk,
+            isEnd = isLast,
+            customStyleId = customStyleId,
+            footnoteMarkers = if (isFirstChunk) footnoteMarkers else emptyList(),
         )
     }
 
