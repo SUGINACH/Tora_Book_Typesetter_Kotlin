@@ -36,7 +36,7 @@ jobs:
         run: gradle wrapper --gradle-version 8.13
 
       - name: Build wasmJs
-        run: ./gradlew :composeapp:wasmJsBrowserDistribution --no-daemon
+        run: ./gradlew clean :composeapp:wasmJsBrowserDistribution --no-daemon
 
       - name: Copy fonts and ornaments to dist
         run: |
