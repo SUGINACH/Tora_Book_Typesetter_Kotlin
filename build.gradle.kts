@@ -3,3 +3,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform) apply false
     alias(libs.plugins.composeCompiler) apply false
 }
+
+allprojects {
+    group = "com.suginach.typesetter"
+}
