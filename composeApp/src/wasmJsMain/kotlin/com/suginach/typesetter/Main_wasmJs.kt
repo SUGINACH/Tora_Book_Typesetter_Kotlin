@@ -1,14 +1,10 @@
 package com.suginach.typesetter
 
-import androidx.compose.runtime.*
-import androidx.compose.ui.*
+import androidx.compose.ui.window.CanvasBasedWindow
 import com.suginach.typesetter.ui.App
-import org.jetbrains.skiko.wasm.onWasmReady
 
 fun main() {
-    onWasmReady {
-        CanvasBasedWindow("מערכת עימוד ספרים תורניים") {
-            App()
-        }
+    CanvasBasedWindow("מערכת עימוד ספרים תורניים") {
+        App()
     }
 }

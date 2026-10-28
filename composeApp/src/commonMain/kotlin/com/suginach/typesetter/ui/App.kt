@@ -60,13 +60,20 @@ fun App() {
 @Composable
 private fun TabButton(label: String, tab: Tab, current: Tab, onClick: (Tab) -> Unit) {
     val isSelected = current == tab
-    Button(
-        onClick = { onClick(tab) },
-        colors = if (isSelected) ButtonDefaults.buttonColors()
-        else ButtonDefaults.outlinedButtonColors(),
-        modifier = Modifier.padding(2.dp)
-    ) {
-        Text(label, fontSize = 12.sp)
+    if (isSelected) {
+        Button(
+            onClick = { onClick(tab) },
+            modifier = Modifier.padding(2.dp)
+        ) {
+            Text(label, fontSize = 12.sp)
+        }
+    } else {
+        OutlinedButton(
+            onClick = { onClick(tab) },
+            modifier = Modifier.padding(2.dp)
+        ) {
+            Text(label, fontSize = 12.sp)
+        }
     }
 }
 

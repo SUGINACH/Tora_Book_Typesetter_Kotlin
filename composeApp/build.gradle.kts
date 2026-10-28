@@ -1,5 +1,3 @@
-import org.jetbrains.compose.ExperimentalComposeLibrary
-
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinSerialization)
@@ -24,7 +22,6 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
-            implementation(compose.components.resources)
             implementation(libs.kotlin.coroutines.core)
             implementation(libs.kotlin.serialization.json)
         }
@@ -36,9 +33,7 @@ kotlin {
         }
 
         val wasmJsMain by getting {
-            dependencies {
-                implementation(compose.html.core)
-            }
+            // wasmJs uses Canvas-based Compose, no extra deps needed
         }
     }
 }
