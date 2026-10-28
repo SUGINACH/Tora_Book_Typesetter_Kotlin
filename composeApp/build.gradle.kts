@@ -10,7 +10,7 @@ kotlin {
     wasmJs {
         browser {
             commonWebpackConfig {
-                outputFileName = "typesetter.js"
+                outputFileName = "composeApp.js"
             }
         }
         binaries.executable()
