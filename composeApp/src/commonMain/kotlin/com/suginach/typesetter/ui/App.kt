@@ -334,7 +334,7 @@ private fun DoubleSettingRow(label: String, value: Double, range: ClosedFloating
                 modifier = Modifier.padding(2.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
             ) { Text("−", fontSize = 10.sp) }
-            Text("%.2f".format(value), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp))
+            Text(formatDouble(value), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp))
             OutlinedButton(
                 onClick = { if (value < range.endInclusive) onChange(((value + step) * 100).toInt() / 100.0) },
                 enabled = value < range.endInclusive,
@@ -845,4 +845,14 @@ private fun headerContentToString(content: HeaderContent): String = when (conten
     is HeaderContent.Text -> content.text
     is HeaderContent.Ornament -> "✦"
     HeaderContent.Empty -> ""
+}
+
+/** פורמט מספר עשרוני בלי String.format (לא זמין ב-wasmJs) */
+private fun formatDouble(v: Double): String {
+    val rounded = (v * 100).toInt() / 100.0
+    val intPart = rounded.toInt()
+    val fracPart = ((rounded - intPart) * 100).toInt()
+    return if (fracPart == 0) "$intPart.00"
+    else if (fracPart < 10) "$intPart.0$fracPart"
+    else "$intPart.$fracPart"
 }
