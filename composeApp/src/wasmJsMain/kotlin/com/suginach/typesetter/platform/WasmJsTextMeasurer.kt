@@ -3,12 +3,8 @@ package com.suginach.typesetter.platform
 import kotlinx.browser.document
 import org.w3c.dom.HTMLCanvasElement
 
-// Top-level JS functions for Canvas measurement (required by wasmJs)
-private fun jsMeasureText(canvas: HTMLCanvasElement, text: String, font: String): Double = js("""
-    var ctx = canvas.getContext('2d');
-    ctx.font = font;
-    return ctx.measureText(text).width;
-""")
+@JsFun("canvas, text, font => { const ctx = canvas.getContext('2d'); ctx.font = font; return ctx.measureText(text).width; }")
+private external fun jsMeasureText(canvas: HTMLCanvasElement, text: String, font: String): Double
 
 actual class WasmJsTextMeasurer : TextMeasurer {
     private val canvas = document.createElement("canvas") as HTMLCanvasElement
