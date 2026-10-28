@@ -55,13 +55,16 @@ class TypesettingEngine(
             }
 
             // עימוד הטוקנים של החלק
-            val pages = pageFiller.fillPages(
+            val (pages, partEndnotes) = pageFiller.fillPages(
                 tokens = part.tokens,
                 settings = settings,
                 metadata = metadata,
                 startPageNumber = pageNumber,
                 partIndex = partIdx,
             )
+
+            // איסוף הערות סיום
+            allEndnotes[partIdx] = partEndnotes
 
             // שלב 5-6: איזון ושמירת שורות
             val processedPages = pages.map { page ->
@@ -79,7 +82,7 @@ class TypesettingEngine(
             allPages.addAll(processedPages)
             pageNumber += processedPages.size
 
-            // איסוף הערות
+            // איסוף הערות שוליים
             for (page in processedPages) {
                 page.footnoteArea?.let { area ->
                     allFootnotes[page.index] = area.entries

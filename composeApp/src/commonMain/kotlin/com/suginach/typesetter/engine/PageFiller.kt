@@ -31,8 +31,9 @@ class PageFiller(
         metadata: BookMetadata,
         startPageNumber: Int,
         partIndex: Int,
-    ): List<RenderedPage> {
+    ): Pair<List<RenderedPage>, List<EndnoteEntry>> {
         val pages = mutableListOf<RenderedPage>()
+        val endnotes = mutableListOf<EndnoteEntry>()
         val colWidthPx = calcColWidthPx(settings)
         val bodyHeightPx = calcBodyHeightPx(settings)
         val lineHeight = measurer.measureLineHeight(settings.bodyFont, settings.bodySize, settings.bodyLineHeight)
@@ -46,6 +47,7 @@ class PageFiller(
         var pendingSideNote: String? = null
         val footnoteQueue = mutableListOf<FootnoteEntry>()
         var footnoteCounter = 0
+        var endnoteCounter = 0
 
         for (token in tokens) {
             when (token) {
@@ -114,11 +116,11 @@ class PageFiller(
                     }
                 }
                 is Token.ParagraphToken -> {
-                    // אם יש הערת סיום — הוסף לתור
+                    // אם יש הערת סיום — אוספים אותה בנפרד (לא כהערת שוליים)
                     if (token.endNote != null) {
-                        footnoteCounter++
-                        val marker = gematria.toGematriaWithGeresh(footnoteCounter)
-                        footnoteQueue.add(FootnoteEntry(marker, token.endNote))
+                        endnoteCounter++
+                        val marker = gematria.toGematriaWithGeresh(endnoteCounter)
+                        endnotes.add(EndnoteEntry(marker, token.endNote))
                         continue
                     }
                     if (token.rawText.isEmpty()) continue
@@ -230,7 +232,7 @@ class PageFiller(
             ))
         }
 
-        return pages
+        return Pair(pages, endnotes)
     }
 
     private fun createHeading(token: Token.HeadingToken, settings: TypesetterSettings): Heading {
