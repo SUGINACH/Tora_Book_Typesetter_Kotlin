@@ -38,6 +38,12 @@ jobs:
       - name: Build wasmJs
         run: ./gradlew :composeApp:wasmJsBrowserDistribution --no-daemon
 
+      - name: Copy fonts and ornaments to dist
+        run: |
+          cp -r fonts composeApp/build/dist/wasmJs/productionExecutable/
+          cp -r ornaments composeApp/build/dist/wasmJs/productionExecutable/
+          cp -r text_files_for_typesetter_tests composeApp/build/dist/wasmJs/productionExecutable/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

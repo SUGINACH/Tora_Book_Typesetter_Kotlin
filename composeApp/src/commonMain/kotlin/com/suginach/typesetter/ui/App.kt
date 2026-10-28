@@ -12,11 +12,16 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import com.suginach.typesetter.model.*
+import com.suginach.typesetter.engine.TypesettingEngine
+import com.suginach.typesetter.engine.TypesetProgress
+import com.suginach.typesetter.platform.WasmJsTextMeasurer
 import com.suginach.typesetter.settings.TypesetterSettings
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.launch
 
 enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 
-val hebrewFont = FontFamily("Noto Sans Hebrew", "Rubik", "sans-serif")
+val hebrewFont = FontFamily.SansSerif
 
 @Composable
 fun App() {
@@ -25,6 +30,9 @@ fun App() {
     var settings by remember { mutableStateOf(TypesetterSettings.default()) }
     var typesetResult by remember { mutableStateOf<TypesetResult?>(null) }
     var isTypesetting by remember { mutableStateOf(false) }
+    var progressText by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    val engine = remember { TypesettingEngine(WasmJsTextMeasurer()) }
 
     MaterialTheme(typography = MaterialTheme.typography.let { it.copy(
         bodyLarge = it.bodyLarge.copy(fontFamily = hebrewFont),
@@ -52,10 +60,31 @@ fun App() {
                 TabButton("📖 תצוגה", Tab.PREVIEW, currentTab) { currentTab = it }
                 Spacer(Modifier.weight(1f))
                 Button(
-                    onClick = { /* יופעל ע"י הפלטפורמה */ },
+                    onClick = {
+                        if (rawText.isNotBlank() && !isTypesetting) {
+                            isTypesetting = true
+                            progressText = "מתחיל..."
+                            scope.launch {
+                                val input = TypesetInput(rawText = rawText)
+                                val result = engine.typeset(input, settings) { progress ->
+                                    progressText = when (progress) {
+                                        is TypesetProgress.Parsing -> "מנתח טקסט... ${progress.linesProcessed}/${progress.totalLines}"
+                                        is TypesetProgress.PageFilling -> "מעמד עמוד ${progress.currentPage}/${progress.totalPages}"
+                                        is TypesetProgress.Balancing -> "מאזן עמוד ${progress.pageIndex}"
+                                        is TypesetProgress.Auditing -> "בודק איכות... נמצאו ${progress.issuesFound} בעיות"
+                                        TypesetProgress.Done -> "הושלם!"
+                                    }
+                                }
+                                typesetResult = result
+                                isTypesetting = false
+                                progressText = ""
+                                currentTab = Tab.PREVIEW
+                            }
+                        }
+                    },
                     enabled = rawText.isNotBlank() && !isTypesetting
                 ) {
-                    Text("⚡ עמד")
+                    Text(if (isTypesetting) "⏳ $progressText" else "⚡ עמד")
                 }
             }
 
