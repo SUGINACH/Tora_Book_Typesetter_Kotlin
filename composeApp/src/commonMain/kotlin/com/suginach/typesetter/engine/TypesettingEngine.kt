@@ -64,7 +64,9 @@ class TypesettingEngine(
             )
 
             // איסוף הערות סיום
-            allEndnotes[partIdx] = partEndnotes
+            if (partEndnotes.isNotEmpty()) {
+                allEndnotes[partIdx] = partEndnotes
+            }
 
             // שלב 5-6: איזון ושמירת שורות
             val processedPages = pages.map { page ->
