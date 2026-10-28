@@ -3,25 +3,19 @@ package com.suginach.typesetter.platform
 import kotlinx.browser.document
 import org.w3c.dom.HTMLCanvasElement
 
+// Top-level JS functions for Canvas measurement (required by wasmJs)
+private fun jsMeasureText(canvas: HTMLCanvasElement, text: String, font: String): Double = js("""
+    var ctx = canvas.getContext('2d');
+    ctx.font = font;
+    return ctx.measureText(text).width;
+""")
+
 actual class WasmJsTextMeasurer : TextMeasurer {
     private val canvas = document.createElement("canvas") as HTMLCanvasElement
 
-    private fun jsMeasure(text: String, font: String): Double {
-        val ctx = canvas.getContext("2d")
-        return jsMeasureImpl(canvas, text, font)
-    }
-
-    private fun jsMeasureImpl(canvas: HTMLCanvasElement, text: String, font: String): Double {
-        return js("""
-            var ctx = canvas.getContext('2d');
-            ctx.font = font;
-            return ctx.measureText(text).width;
-        """) as Double
-    }
-
     override fun measureWidth(text: String, fontFamily: String, fontSizePt: Int, fontWeight: String): Double {
         val font = "$fontWeight ${fontSizePt}pt \"$fontFamily\", serif"
-        return jsMeasure(text, font)
+        return jsMeasureText(canvas, text, font)
     }
 
     override fun measureLineHeight(fontFamily: String, fontSizePt: Int, lineHeight: Double): Double {
@@ -42,10 +36,10 @@ actual class WasmJsTextMeasurer : TextMeasurer {
         val lines = mutableListOf<String>()
         var currentLine = StringBuilder()
         var currentWidth = 0.0
-        val spaceWidth = jsMeasure(" ", font)
+        val spaceWidth = jsMeasureText(canvas, " ", font)
 
         for (word in words) {
-            val wordWidth = jsMeasure(word, font)
+            val wordWidth = jsMeasureText(canvas, word, font)
             if (currentLine.isEmpty()) {
                 currentLine.append(word)
                 currentWidth = wordWidth
