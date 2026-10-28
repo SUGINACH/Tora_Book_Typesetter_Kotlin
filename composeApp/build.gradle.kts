@@ -6,7 +6,9 @@ plugins {
 }
 
 compose.resources {
+    publicResClass = true
     packageOfResClass = "com.suginach.typesetter.resources"
+    generateResClass = always
 }
 
 kotlin {

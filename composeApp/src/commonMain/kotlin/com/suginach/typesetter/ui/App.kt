@@ -30,9 +30,9 @@ enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 @Composable
 fun hebrewFont(): FontFamily {
     return FontFamily(
-        Font(Res.font.frankruehl_regular, FontWeight.Normal),
-        Font(Res.font.frankruehl_medium, FontWeight.Medium),
-        Font(Res.font.frankruehl_bold, FontWeight.Bold),
+        Font(Res.font.frankruehlregular, FontWeight.Normal),
+        Font(Res.font.frankruehlmedium, FontWeight.Medium),
+        Font(Res.font.frankruehlbold, FontWeight.Bold),
     )
 }
 
