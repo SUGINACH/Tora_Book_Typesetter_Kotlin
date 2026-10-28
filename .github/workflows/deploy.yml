@@ -44,10 +44,12 @@ jobs:
 
       - name: Build wasmJs
         run: |
-          ./gradlew clean :composeapp:generateComposeResClass --no-daemon
-          echo "=== Generated Res class ==="
-          find composeapp/build -name "Res.kt" -exec cat {} \; 2>/dev/null || echo "no Res.kt found"
-          echo "=== End Res class ==="
+          ./gradlew clean :composeapp:generateResourceAccessorsForCommonMain --no-daemon
+          echo "=== All generated files ==="
+          find composeapp/build -name "*.kt" -path "*resourceGenerator*" 2>/dev/null
+          echo "=== Content of all generated kt files ==="
+          find composeapp/build -name "*.kt" -path "*resourceGenerator*" -exec echo "FILE: {}" \; -exec cat {} \; 2>/dev/null
+          echo "=== End ==="
           ./gradlew :composeapp:wasmJsBrowserDistribution --no-daemon
 
       - name: Copy fonts and ornaments to dist
