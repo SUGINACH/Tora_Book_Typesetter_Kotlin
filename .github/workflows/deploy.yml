@@ -43,7 +43,12 @@ jobs:
           git status
 
       - name: Build wasmJs
-        run: ./gradlew clean :composeapp:wasmJsBrowserDistribution --no-daemon
+        run: |
+          ./gradlew clean :composeapp:generateComposeResClass --no-daemon
+          echo "=== Generated Res class ==="
+          find composeapp/build -name "Res.kt" -exec cat {} \; 2>/dev/null || echo "no Res.kt found"
+          echo "=== End Res class ==="
+          ./gradlew :composeapp:wasmJsBrowserDistribution --no-daemon
 
       - name: Copy fonts and ornaments to dist
         run: |
