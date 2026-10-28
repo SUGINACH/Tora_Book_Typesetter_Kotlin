@@ -614,74 +614,94 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(8.dp),
+            modifier = Modifier.fillMaxSize().padding(6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // כותרת עליונה
-            if (page.headerRow != null) {
+            // 1. כותרת עליונה
+            page.headerRow?.let { headerRow ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(headerContentToString(page.headerRow.right), fontSize = 6.sp)
-                    Text(headerContentToString(page.headerRow.center), fontSize = 6.sp)
-                    Text(headerContentToString(page.headerRow.left), fontSize = 6.sp)
+                    Text(headerContentToString(headerRow.right), fontSize = 6.sp)
+                    Text(headerContentToString(headerRow.center), fontSize = 6.sp)
+                    Text(headerContentToString(headerRow.left), fontSize = 6.sp)
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 1.dp))
             }
 
-            // טורים
+            // 2. אזור הטקסט המרכזי (body area)
             Row(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                for (column in page.columns) {
+                val bodyArea = page.bodyArea
+
+                // 2.1 אזור טקסט עיקרי + כותרות צד
+                Row(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    val mainArea = bodyArea.mainArea
+
+                    // כותרות צד ימין
+                    if (mainArea.rightSideNotes.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier.width(40.dp).fillMaxHeight(),
+                            horizontalAlignment = Alignment.Start,
+                        ) {
+                            for (sn in mainArea.rightSideNotes) {
+                                Text(sn.text, fontSize = 5.sp, maxLines = 3)
+                                Spacer(Modifier.height(2.dp))
+                            }
+                        }
+                    }
+
+                    // אזור הטקסט (blocks)
                     Column(
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        verticalArrangement = Arrangement.Top,
-                        horizontalAlignment = Alignment.End
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        for (block in column.blocks) {
-                            when (block) {
-                                is Block.TwoColumn -> {
-                                    // טור ימני
-                                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                        for (para in block.rightParagraphs) {
-                                            ParagraphPreview(para, settings)
-                                        }
-                                    }
-                                    // טור שמאלי
-                                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                        for (para in block.leftParagraphs) {
-                                            ParagraphPreview(para, settings)
-                                        }
-                                    }
-                                }
-                                is Block.SingleColumn -> {
-                                    for (para in block.paragraphs) {
-                                        ParagraphPreview(para, settings)
-                                    }
-                                }
-                                else -> {}
+                        for (block in mainArea.textArea.blocks) {
+                            BlockPreview(block, settings)
+                        }
+                    }
+
+                    // כותרות צד שמאל
+                    if (mainArea.leftSideNotes.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier.width(40.dp).fillMaxHeight(),
+                            horizontalAlignment = Alignment.End,
+                        ) {
+                            for (sn in mainArea.leftSideNotes) {
+                                Text(sn.text, fontSize = 5.sp, maxLines = 3)
+                                Spacer(Modifier.height(2.dp))
                             }
+                        }
+                    }
+                }
+
+                // 2.2 אזור הערות שוליים
+                bodyArea.footnoteArea?.let { fnArea ->
+                    Column(
+                        modifier = Modifier.width(50.dp).fillMaxHeight(),
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        fnArea.header?.let {
+                            Text(it, fontSize = 4.sp, fontWeight = FontWeight.Bold)
+                        }
+                        for (entry in fnArea.entries) {
+                            Text("${entry.marker}. ${entry.text}", fontSize = 4.sp, maxLines = 2)
                         }
                     }
                 }
             }
 
-            // הערות שוליים
-            page.footnoteArea?.let { fnArea ->
-                HorizontalDivider(modifier = Modifier.padding(vertical = 1.dp))
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    fnArea.header?.let { Text(it, fontSize = 5.sp, fontWeight = FontWeight.Bold) }
-                    for (entry in fnArea.entries) {
-                        Text("${entry.marker}. ${entry.text}", fontSize = 5.sp, maxLines = 2)
-                    }
-                }
-            }
-
-            // מספר עמוד
-            page.pageNumberFooter?.let {
+            // 3. כותרת תחתונה (מספר עמוד)
+            page.footerRow?.let { footer ->
+                Spacer(Modifier.height(2.dp))
+                Text(footer.pageNumber, fontSize = 7.sp)
+            } ?: page.pageNumberFooter?.let {
                 Spacer(Modifier.height(2.dp))
                 Text(it, fontSize = 7.sp)
             }
@@ -690,25 +710,131 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
 }
 
 @Composable
+private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
+    when (block) {
+        is TextBlock.TwoColumn -> {
+            // שני טורים שווים ברוחבם ומאוזנים בגובהם
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                // טור ימני
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    for (para in block.rightParagraphs) {
+                        ParagraphPreview(para, settings)
+                    }
+                }
+                // טור שמאלי
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    for (para in block.leftParagraphs) {
+                        ParagraphPreview(para, settings)
+                    }
+                }
+            }
+        }
+        is TextBlock.SingleColumn -> {
+            // טור אחד לרוחב
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.End,
+            ) {
+                block.heading?.let { HeadingPreview(it) }
+                for (para in block.paragraphs) {
+                    ParagraphPreview(para, settings)
+                }
+            }
+        }
+        is TextBlock.HeadingSpan -> {
+            // כותרת חוצה טורים — full-width
+            HeadingPreview(block.heading)
+        }
+        is TextBlock.Divider -> {
+            // מחלק עיטורי — לסוף פרק 7
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                val count = if (block.isChapterEnd) 3 else 1
+                repeat(count) {
+                    Text("✦", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 2.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeadingPreview(heading: Heading) {
+    val fontSize = (heading.fontSizePt * 0.7).sp
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalAlignment = when (heading.alignment) {
+            TextAlignment.CENTER -> Alignment.CenterHorizontally
+            TextAlignment.LEFT -> Alignment.Start
+            TextAlignment.RIGHT -> Alignment.End
+            TextAlignment.JUSTIFIED -> Alignment.CenterHorizontally
+        },
+    ) {
+        // עיטור עליון
+        if (heading.ornamentTop != null && heading.ornamentTop != "none") {
+            Text("✦", fontSize = 8.sp)
+        }
+        // הכותרת עצמה
+        val baseText = heading.text
+        val withSiman = heading.simanBadge?.let { "$it — $baseText" } ?: baseText
+        Text(
+            withSiman,
+            fontSize = fontSize,
+            fontWeight = if (heading.isBold) FontWeight.Bold else FontWeight.Normal,
+        )
+        // עיטור תחתון
+        if (heading.ornamentBottom != null && heading.ornamentBottom != "none") {
+            Text("✦", fontSize = 8.sp)
+        }
+    }
+}
+
+@Composable
 private fun ParagraphPreview(para: Paragraph, settings: TypesetterSettings) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
         for ((idx, line) in para.lines.withIndex()) {
+            val isLast = idx == para.lines.lastIndex
+            // יישור: שורה אחרונה ממורכזת, אחרת יישור לשני צדדים (Compose יעשה את זה אוטומטית)
+            val align = when (line.alignment) {
+                TextAlignment.CENTER -> TextAlign.Center
+                TextAlignment.LEFT -> TextAlign.Left
+                TextAlignment.RIGHT -> TextAlign.Right
+                TextAlignment.JUSTIFIED -> TextAlign.Justify
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = when (line.alignment) {
+                    TextAlignment.CENTER -> Arrangement.Center
+                    TextAlignment.LEFT -> Arrangement.Start
+                    TextAlignment.RIGHT -> Arrangement.End
+                    TextAlignment.JUSTIFIED -> Arrangement.SpaceBetween
+                }
             ) {
-                if (idx == 0 && para.firstWord != null) {
+                if (idx == 0 && para.firstWord != null && para.firstWordStyle != null) {
+                    // מילה ראשונה מוגדלת עם חלון
+                    val fwStyle = para.firstWordStyle
                     Text(
                         para.firstWord + " ",
-                        fontSize = (settings.bodySize * 0.6).sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = (fwStyle.fontSizePt * 0.55).sp,
+                        fontWeight = if (fwStyle.isBold) FontWeight.Bold else FontWeight.Normal,
                     )
-                    val remaining = line.removePrefix(para.firstWord).trimStart()
+                    val remaining = line.text.removePrefix(para.firstWord).trimStart()
                     if (remaining.isNotEmpty()) {
                         Text(remaining, fontSize = (settings.bodySize * 0.55).sp)
                     }
                 } else {
-                    Text(line, fontSize = (settings.bodySize * 0.55).sp)
+                    Text(line.text, fontSize = (settings.bodySize * 0.55).sp)
                 }
             }
         }

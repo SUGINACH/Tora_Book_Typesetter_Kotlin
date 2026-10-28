@@ -48,23 +48,50 @@ data class TypesetterSettings(
     val headingSizes: Map<Int, Int> = mapOf(
         0 to 24, 1 to 20, 2 to 16, 3 to 14, 4 to 12, 5 to 12, 6 to 12, 7 to 10,
     ),
+    /** ריווח לפני כותרת בכל רמה (pt) */
+    val headingSpaceBefore: Map<Int, Int> = mapOf(
+        0 to 24, 1 to 18, 2 to 14, 3 to 10, 4 to 6, 5 to 4, 6 to 4, 7 to 2,
+    ),
+    /** ריווח אחרי כותרת בכל רמה (pt) */
+    val headingSpaceAfter: Map<Int, Int> = mapOf(
+        0 to 18, 1 to 14, 2 to 10, 3 to 8, 4 to 4, 5 to 4, 6 to 2, 7 to 2,
+    ),
+    val headingBold: Map<Int, Boolean> = mapOf(
+        0 to true, 1 to true, 2 to true, 3 to true,
+        4 to true, 5 to true, 6 to true, 7 to false,
+    ),
+    val headingAlignment: Map<Int, String> = mapOf(
+        0 to "center", 1 to "center", 2 to "center", 3 to "center",
+        4 to "right", 5 to "right", 6 to "right", 7 to "right",
+    ),
     val h2AutoSiman: Boolean = true,
     val h2SimanResetPerPart: Boolean = true,
     val h2OrnamentTop: String = "none",
     val h2OrnamentBottom: String = "none",
     val h3OrnamentRight: String = "none",
     val h3OrnamentLeft: String = "none",
+    /** עיטורי כותרות — מזהי עיטורים זמינים */
+    val ornamentStyle: String = "default",
 
     // גוף הטקסט
     val bodyFont: String = "Frank-Ruehl",
     val bodySize: Int = 12,
     val bodyLineHeight: Double = 1.34,
+    val bodyAlignment: String = "justified",
+    val bodyLastLineAlignment: String = "center",
     val firstWordFont: String = "Frank-Ruehl",
     val firstWordSize: Double = 1.5,
     val firstWordMode: String = "window",
     val firstWordCount: Int = 1,
     val firstWordMinLines: Int = 2,
+    val firstWordBold: Boolean = false,
+    val firstWordHasWindow: Boolean = true,
+    val firstWordWindowChars: Int = 3,
     val dibburHamatchilEnabled: Boolean = false,
+
+    // עיטורי סוף פרק 7
+    val chapterEndOrnament: String = "stars",
+    val chapterEndOrnamentCount: Int = 3,
 
     // כותרות עליונות
     val headerRightType: String = "h1",

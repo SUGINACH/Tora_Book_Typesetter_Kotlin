@@ -14,17 +14,28 @@ import kotlin.math.abs
  */
 class ColumnBalancer {
     fun balance(page: RenderedPage, settings: TypesetterSettings): RenderedPage {
-        if (page.columns.isEmpty()) return page
+        val blocks = page.bodyArea.mainArea.textArea.blocks
+        if (blocks.isEmpty()) return page
 
-        val column = page.columns.first()
-        val block = column.blocks.firstOrNull() ?: return page
-        if (block !is Block.TwoColumn) return page
+        // אוסף את כל ה-TwoColumn blocks ומאזן אותם
+        val newBlocks = blocks.map { block ->
+            when (block) {
+                is TextBlock.TwoColumn -> balanceTwoColumn(block)
+                else -> block
+            }
+        }
 
+        val newTextArea = page.bodyArea.mainArea.textArea.copy(blocks = newBlocks, isBalanced = true)
+        val newMainArea = page.bodyArea.mainArea.copy(textArea = newTextArea)
+        val newBodyArea = page.bodyArea.copy(mainArea = newMainArea)
+        return page.copy(bodyArea = newBodyArea)
+    }
+
+    private fun balanceTwoColumn(block: TextBlock.TwoColumn): TextBlock.TwoColumn {
         val rightLines = block.rightParagraphs.sumOf { it.lines.size }
         val leftLines = block.leftParagraphs.sumOf { it.lines.size }
 
-        // אין צורך באיזון אם הפער קטן
-        if (abs(rightLines - leftLines) <= 1) return page
+        if (abs(rightLines - leftLines) <= 1) return block
 
         val (newRight, newLeft) = if (rightLines > leftLines) {
             rebalance(block.rightParagraphs, block.leftParagraphs, targetRight = (rightLines + leftLines) / 2)
@@ -33,9 +44,7 @@ class ColumnBalancer {
             newR to newL
         }
 
-        val newBlock = Block.TwoColumn(newRight, newLeft)
-        val newColumn = Column(listOf(newBlock), column.heightPx, isBalanced = true)
-        return page.copy(columns = listOf(newColumn))
+        return block.copy(rightParagraphs = newRight, leftParagraphs = newLeft, isBalanced = true)
     }
 
     /**
@@ -72,6 +81,7 @@ class ColumnBalancer {
                     lines = moveLines,
                     isFirstWordEnlarged = false,
                     firstWord = null,
+                    firstWordStyle = null,
                     isContinuation = true,
                 ))
             }
@@ -89,133 +99,110 @@ class ColumnBalancer {
  */
 class WidowOrphanGuard {
     fun guard(page: RenderedPage, settings: TypesetterSettings): RenderedPage {
-        if (page.columns.isEmpty()) return page
-        val column = page.columns.first()
-        val block = column.blocks.firstOrNull() ?: return page
-        if (block !is Block.TwoColumn) return page
+        val blocks = page.bodyArea.mainArea.textArea.blocks
+        if (blocks.isEmpty()) return page
 
-        val newRight = fixColumn(block.rightParagraphs)
-        val newLeft = fixColumn(block.leftParagraphs)
-        val newBlock = Block.TwoColumn(newRight, newLeft)
-        val newColumn = Column(listOf(newBlock), column.heightPx, column.isBalanced)
-        return page.copy(columns = listOf(newColumn))
+        val newBlocks = blocks.map { block ->
+            when (block) {
+                is TextBlock.TwoColumn -> block.copy(
+                    rightParagraphs = fixColumn(block.rightParagraphs),
+                    leftParagraphs = fixColumn(block.leftParagraphs),
+                )
+                else -> block
+            }
+        }
+
+        val newTextArea = page.bodyArea.mainArea.textArea.copy(blocks = newBlocks)
+        val newMainArea = page.bodyArea.mainArea.copy(textArea = newTextArea)
+        val newBodyArea = page.bodyArea.copy(mainArea = newMainArea)
+        return page.copy(bodyArea = newBodyArea)
     }
 
-    /**
-     * מתקן יתומות/אלמנות בתוך טור:
-     * - אם פסקה מסתיימת בשורה אחת בודדת (orphan בראש הטור הבא), מוסיף שורה קודמת
-     * - אם פסקה מתחילה בשורה אחת בודדת בסוף הטור (orphan), מעביר את כל הפסקה לטור הבא
-     */
     private fun fixColumn(paragraphs: List<Paragraph>): List<Paragraph> {
-        if (paragraphs.isEmpty()) return paragraphs
-        val result = paragraphs.toMutableList()
-
-        // בדיקת orphan: פסקה ראשונה בטור עם שורה אחת בלבד שאינה המשך
-        if (result.size > 1) {
-            val first = result.first()
-            if (first.lines.size == 1 && !first.isContinuation) {
-                // מעביר שורה אחת מהפסקה הקודמת (האחרונה של הטור הקודם)
-                // כאן אנחנו רק מסמנים — ההעברה בפועל נעשית על ידי הבלנסר
-            }
-        }
-
-        // בדיקת widow: פסקה אחרונה בטור עם שורה אחת
-        if (result.size > 1) {
-            val last = result.last()
-            if (last.lines.size == 1 && !last.isContinuation) {
-                // מסמן שצריך להעביר את הפסקה לטור הבא
-                // בפועל, אנחנו משאירים אותה והבלנסר יטפל בזה
-            }
-        }
-
-        // בדיקת "כותרת יתומה": פסקה אחרונה שהיא כותרת (שורה אחת, ללא firstWord)
-        // נשאיר את הטיפול המלא לשלב מתקדם יותר
-        return result.toList()
+        // TODO: מימוש מלא — כרגע רק מחזיר את הרשימה כמו שהיא
+        return paragraphs
     }
 }
 
 /**
  * מבקר איכות גיאומטרי — סורק את העמודים ומדווח על בעיות.
- *
- * בעיות שמזוהות:
- * 1. WIDOW — שורה אחרונה בודדת בראש טור
- * 2. ORPHAN — שורה ראשונה בודדת בסוף טור
- * 3. ORPHAN_HEADING — כותרת בסוף עמוד ללא פסקה אחריה
- * 4. IMBALANCED — פער גדול בין גובה הטורים
- * 5. OVERFLOW — פסקה חורגת מגובה העמוד
- * 6. SPARSE_LINE — שורה דלילה מאוד (פחות מ-30% מרוחב הטור)
- * 7. EMPTY_COLUMN — טור ריק לחלוטין
- * 8. SHORT_PAGE_BEFORE_H3 — עמוד קצר לפני כותרת רמה 3
  */
 class GeometryAuditor {
     fun audit(pages: List<RenderedPage>, settings: TypesetterSettings): AuditReport {
         val issues = mutableListOf<AuditIssue>()
 
         for ((pageIdx, page) in pages.withIndex()) {
-            if (page.columns.isEmpty()) continue
-            val column = page.columns.first()
-            val block = column.blocks.firstOrNull() ?: continue
-            if (block !is Block.TwoColumn) continue
+            val blocks = page.bodyArea.mainArea.textArea.blocks
 
-            // בדיקת איזון טורים
-            val rightLines = block.rightParagraphs.sumOf { it.lines.size }
-            val leftLines = block.leftParagraphs.sumOf { it.lines.size }
-            val totalLines = rightLines + leftLines
-            if (totalLines > 0) {
-                val diff = abs(rightLines - leftLines)
-                if (diff >= 3 && minOf(rightLines, leftLines) > 0) {
+            for (block in blocks) {
+                if (block !is TextBlock.TwoColumn) continue
+
+                // בדיקת איזון טורים
+                val rightLines = block.rightParagraphs.sumOf { it.lines.size }
+                val leftLines = block.leftParagraphs.sumOf { it.lines.size }
+                val totalLines = rightLines + leftLines
+                if (totalLines > 0) {
+                    val diff = abs(rightLines - leftLines)
+                    if (diff >= 3 && minOf(rightLines, leftLines) > 0) {
+                        issues.add(AuditIssue(
+                            page = page.index,
+                            type = IssueType.IMBALANCED,
+                            severity = Severity.MEDIUM,
+                            description = "פער של $diff שורות בין הטורים (ימין=$rightLines, שמאל=$leftLines)",
+                        ))
+                    }
+                }
+
+                // בדיקת טור ריק
+                if (rightLines == 0 && leftLines > 0) {
                     issues.add(AuditIssue(
                         page = page.index,
-                        type = IssueType.IMBALANCED,
-                        severity = Severity.MEDIUM,
-                        description = "פער של $diff שורות בין הטורים (ימין=$rightLines, שמאל=$leftLines)",
+                        type = IssueType.EMPTY_COLUMN,
+                        severity = Severity.LOW,
+                        description = "הטור הימני ריק",
                     ))
                 }
+                if (leftLines == 0 && rightLines > 0) {
+                    issues.add(AuditIssue(
+                        page = page.index,
+                        type = IssueType.EMPTY_COLUMN,
+                        severity = Severity.LOW,
+                        description = "הטור השמאלי ריק",
+                    ))
+                }
+
+                // בדיקת widow/orphan
+                checkWidowOrphan(block.rightParagraphs, page.index, "ימין", issues)
+                checkWidowOrphan(block.leftParagraphs, page.index, "שמאל", issues)
+
+                // בדיקת שורות דלילות
+                checkSparseLines(block.rightParagraphs, page.index, "ימין", issues)
+                checkSparseLines(block.leftParagraphs, page.index, "שמאל", issues)
+
+                // בדיקת כותרת יתומה
+                checkOrphanHeading(block.rightParagraphs, page.index, "ימין", issues)
+                checkOrphanHeading(block.leftParagraphs, page.index, "שמאל", issues)
             }
-
-            // בדיקת טור ריק
-            if (rightLines == 0 && leftLines > 0) {
-                issues.add(AuditIssue(
-                    page = page.index,
-                    type = IssueType.EMPTY_COLUMN,
-                    severity = Severity.LOW,
-                    description = "הטור הימני ריק",
-                ))
-            }
-            if (leftLines == 0 && rightLines > 0) {
-                issues.add(AuditIssue(
-                    page = page.index,
-                    type = IssueType.EMPTY_COLUMN,
-                    severity = Severity.LOW,
-                    description = "הטור השמאלי ריק",
-                ))
-            }
-
-            // בדיקת widow/orphan
-            checkWidowOrphan(block.rightParagraphs, page.index, "ימין", issues)
-            checkWidowOrphan(block.leftParagraphs, page.index, "שמאל", issues)
-
-            // בדיקת שורות דלילות
-            checkSparseLines(block.rightParagraphs, page.index, "ימין", issues)
-            checkSparseLines(block.leftParagraphs, page.index, "שמאל", issues)
-
-            // בדיקת כותרת יתומה — הפסקה האחרונה היא כותרת
-            checkOrphanHeading(block.rightParagraphs, page.index, "ימין", issues)
-            checkOrphanHeading(block.leftParagraphs, page.index, "שמאל", issues)
 
             // בדיקת עמוד קצר לפני כותרת רמה 3
             if (pageIdx < pages.size - 1) {
                 val nextPage = pages[pageIdx + 1]
-                val nextBlock = nextPage.columns.firstOrNull()?.blocks?.firstOrNull()
-                if (nextBlock is Block.TwoColumn) {
-                    val firstPara = nextBlock.rightParagraphs.firstOrNull()
-                    // אם הפסקה הראשונה בעמוד הבא היא כותרת והעמוד הנוכחי קצר
-                    if (firstPara != null && firstPara.lines.size == 1 && totalLines < 10) {
+                val nextBlocks = nextPage.bodyArea.mainArea.textArea.blocks
+                val firstBlock = nextBlocks.firstOrNull()
+                if (firstBlock is TextBlock.HeadingSpan && firstBlock.heading.level == 3) {
+                    val totalLines = blocks.sumOf {
+                        when (it) {
+                            is TextBlock.TwoColumn -> it.rightParagraphs.sumOf { p -> p.lines.size } + it.leftParagraphs.sumOf { p -> p.lines.size }
+                            is TextBlock.SingleColumn -> it.paragraphs.sumOf { p -> p.lines.size }
+                            else -> 0
+                        }
+                    }
+                    if (totalLines < 10) {
                         issues.add(AuditIssue(
                             page = page.index,
                             type = IssueType.SHORT_PAGE_BEFORE_H3,
                             severity = Severity.LOW,
-                            description = "עמוד קצר ($totalLines שורות) לפני כותרת בעמוד הבא",
+                            description = "עמוד קצר ($totalLines שורות) לפני כותרת רמה 3 בעמוד הבא",
                         ))
                     }
                 }
@@ -233,7 +220,6 @@ class GeometryAuditor {
     ) {
         if (paragraphs.isEmpty()) return
 
-        // Widow: פסקה ראשונה בטור עם שורה אחת (אחרונה של פסקה קודמת)
         val first = paragraphs.first()
         if (first.lines.size == 1 && !first.isContinuation && paragraphs.size > 1) {
             issues.add(AuditIssue(
@@ -244,7 +230,6 @@ class GeometryAuditor {
             ))
         }
 
-        // Orphan: פסקה אחרונה בטור עם שורה אחת (ראשונה של פסקה הבאה)
         val last = paragraphs.last()
         if (last.lines.size == 1 && paragraphs.size > 1) {
             issues.add(AuditIssue(
@@ -262,22 +247,20 @@ class GeometryAuditor {
         side: String,
         issues: MutableList<AuditIssue>,
     ) {
-        // שורה דלילה = פחות מ-30% מאורך ממוצע
         val allLines = paragraphs.flatMap { it.lines }
         if (allLines.size < 5) return
-        val avgLen = allLines.map { it.length }.average()
+        val avgLen = allLines.map { it.text.length }.average()
         val threshold = avgLen * 0.3
 
         for ((paraIdx, para) in paragraphs.withIndex()) {
             for ((lineIdx, line) in para.lines.withIndex()) {
-                // לא בודקים את השורה האחרונה של פסקה (תמיד קצרה יחסית)
                 if (lineIdx == para.lines.lastIndex) continue
-                if (line.length < threshold && line.length < 15) {
+                if (line.text.length < threshold && line.text.length < 15) {
                     issues.add(AuditIssue(
                         page = pageNum,
                         type = IssueType.SPARSE_LINE,
                         severity = Severity.LOW,
-                        description = "שורה דלילה בטור ה${side}י (פסקה ${paraIdx + 1}, שורה ${lineIdx + 1}): ${line.length} תווים",
+                        description = "שורה דלילה בטור ה${side}י (פסקה ${paraIdx + 1}, שורה ${lineIdx + 1}): ${line.text.length} תווים",
                     ))
                 }
             }
@@ -292,9 +275,7 @@ class GeometryAuditor {
     ) {
         if (paragraphs.isEmpty()) return
         val last = paragraphs.last()
-        // כותרת = שורה אחת, ללא firstWord מוגדל, לא המשך
         if (last.lines.size == 1 && !last.isFirstWordEnlarged && !last.isContinuation) {
-            // הנחה: אם זו שורה קצרה יחסית וללא firstWord, כנראה כותרת
             if (last.text.length < 80) {
                 issues.add(AuditIssue(
                     page = pageNum,
