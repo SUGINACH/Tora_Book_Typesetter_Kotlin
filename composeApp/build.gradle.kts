@@ -23,7 +23,6 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
-            implementation(compose.components.resources)
             implementation(libs.kotlin.coroutines.core)
             implementation(libs.kotlin.serialization.json)
         }

@@ -18,18 +18,14 @@ import com.suginach.typesetter.platform.WasmJsTextMeasurer
 import com.suginach.typesetter.settings.TypesetterSettings
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.Font
-import com.suginach.typesetter.composeapp.generated.resources.Res
 
 enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 
-@Composable
-fun hebrewFont(): FontFamily {
-    val regular = Font(Res.font.frank_ruehl_regular)
-    val bold = Font(Res.font.frank_ruehl_bold, FontWeight.Bold)
-    val medium = Font(Res.font.frank_ruehl_medium, FontWeight.Medium)
-    return FontFamily(regular, bold, medium)
-}
+/**
+ * גופן עברי ראשי — Frank-Ruehl הנטען דרך @font-face ב-index.html.
+ * Skiko ב-wasm משתמש בגופנים של הדפדפן, לכן שם הגופן חייב להתאים ל-@font-face.
+ */
+val hebrewFont = FontFamily("Frank-Ruehl")
 
 @Composable
 fun App() {
@@ -41,21 +37,20 @@ fun App() {
     var progressText by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val engine = remember { TypesettingEngine(WasmJsTextMeasurer()) }
-    val font = hebrewFont()
 
     MaterialTheme(typography = MaterialTheme.typography.let { it.copy(
-        bodyLarge = it.bodyLarge.copy(fontFamily = font),
-        bodyMedium = it.bodyMedium.copy(fontFamily = font),
-        bodySmall = it.bodySmall.copy(fontFamily = font),
-        titleLarge = it.titleLarge.copy(fontFamily = font),
-        titleMedium = it.titleMedium.copy(fontFamily = font),
-        titleSmall = it.titleSmall.copy(fontFamily = font),
-        labelLarge = it.labelLarge.copy(fontFamily = font),
-        labelMedium = it.labelMedium.copy(fontFamily = font),
-        labelSmall = it.labelSmall.copy(fontFamily = font),
-        headlineLarge = it.headlineLarge.copy(fontFamily = font),
-        headlineMedium = it.headlineMedium.copy(fontFamily = font),
-        headlineSmall = it.headlineSmall.copy(fontFamily = font),
+        bodyLarge = it.bodyLarge.copy(fontFamily = hebrewFont),
+        bodyMedium = it.bodyMedium.copy(fontFamily = hebrewFont),
+        bodySmall = it.bodySmall.copy(fontFamily = hebrewFont),
+        titleLarge = it.titleLarge.copy(fontFamily = hebrewFont),
+        titleMedium = it.titleMedium.copy(fontFamily = hebrewFont),
+        titleSmall = it.titleSmall.copy(fontFamily = hebrewFont),
+        labelLarge = it.labelLarge.copy(fontFamily = hebrewFont),
+        labelMedium = it.labelMedium.copy(fontFamily = hebrewFont),
+        labelSmall = it.labelSmall.copy(fontFamily = hebrewFont),
+        headlineLarge = it.headlineLarge.copy(fontFamily = hebrewFont),
+        headlineMedium = it.headlineMedium.copy(fontFamily = hebrewFont),
+        headlineSmall = it.headlineSmall.copy(fontFamily = hebrewFont),
     )}) {
         Column(modifier = Modifier.fillMaxSize()) {
             // סרגל כרטיסיות
@@ -163,7 +158,7 @@ private fun EditorTab(text: String, onTextChange: (String) -> Unit) {
             modifier = Modifier.fillMaxSize(),
             placeholder = { Text("הדבק כאן את הטקסט הגולמי...\n\nדוגמה:\nכותרת 1 - חלק ראשון\nכותרת 2 - סימן א\nזהו טקסט רגיל [וזו הערת שוליים].\nכותרת 7 - הערת צד\nזהו עוד טקסט.\n\nאו לחץ על \"טען דוגמה\" למעלה.") },
             textStyle = androidx.compose.ui.text.TextStyle(
-                fontFamily = hebrewFont(),
+                fontFamily = hebrewFont,
                 fontSize = 11.sp,
                 textAlign = TextAlign.Right,
             ),
