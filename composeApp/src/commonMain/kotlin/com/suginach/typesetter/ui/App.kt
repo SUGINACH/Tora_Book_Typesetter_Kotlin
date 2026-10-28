@@ -15,6 +15,7 @@ import com.suginach.typesetter.model.*
 import com.suginach.typesetter.engine.TypesettingEngine
 import com.suginach.typesetter.engine.TypesetProgress
 import com.suginach.typesetter.platform.WasmJsTextMeasurer
+import com.suginach.typesetter.platform.loadHebrewFont
 import com.suginach.typesetter.settings.TypesetterSettings
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.launch
@@ -22,11 +23,11 @@ import kotlinx.coroutines.launch
 enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 
 /**
- * גופן עברי ראשי — Frank-Ruehl הנטען דרך @font-face ב-index.html.
- * Skiko ב-wasm משתמש בגופנים של הדפדפן, לכן שם הגופן חייב להתאים ל-@font-face.
- * משתמשים ב-FontFamily(Font(name)) כי FontFamily(String) protected.
+ * גופן עברי ראשי — Frank-Ruehl.
+ * נטען דרך expect/actual (platform/HebrewFont.kt).
+ * ב-wasmJs — דרך @font-face שמוגדר ב-index.html + Skiko יורש font-family.
  */
-val hebrewFont = FontFamily(Font("Frank-Ruehl"))
+val hebrewFont = loadHebrewFont()
 
 @Composable
 fun App() {
