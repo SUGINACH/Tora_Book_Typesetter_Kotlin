@@ -19,7 +19,7 @@ import com.suginach.typesetter.settings.TypesetterSettings
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.Font
-import typesetter.composeapp.generated.resources.Res
+import com.suginach.typesetter.resources.Res
 
 enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 
