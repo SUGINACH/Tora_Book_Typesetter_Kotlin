@@ -34,7 +34,9 @@ kotlin {
         }
 
         val wasmJsMain by getting {
-            // wasmJs uses Canvas-based Compose, no extra deps needed
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")
+            }
         }
     }
 }
