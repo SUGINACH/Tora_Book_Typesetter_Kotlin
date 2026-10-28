@@ -35,6 +35,13 @@ jobs:
       - name: Generate Gradle Wrapper
         run: gradle wrapper --gradle-version 8.13
 
+      - name: Verify font files
+        run: |
+          echo "=== composeResources directory ==="
+          ls -la composeapp/src/commonMain/composeResources/font/ || echo "directory not found"
+          echo "=== git status ==="
+          git status
+
       - name: Build wasmJs
         run: ./gradlew clean :composeapp:wasmJsBrowserDistribution --no-daemon
 
