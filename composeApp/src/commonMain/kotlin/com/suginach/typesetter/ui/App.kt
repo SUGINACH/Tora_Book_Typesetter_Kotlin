@@ -127,17 +127,32 @@ private fun EditorTab(text: String, onTextChange: (String) -> Unit) {
         // סרגל כלים
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("סה״כ שורות: ${text.lines().size}", fontSize = 10.sp)
             Text("סה״כ תווים: ${text.length}", fontSize = 10.sp)
+            Spacer(Modifier.weight(1f))
+            OutlinedButton(
+                onClick = { onTextChange(sampleText) },
+                modifier = Modifier.padding(2.dp),
+            ) {
+                Text("📄 טען דוגמה", fontSize = 10.sp)
+            }
+            OutlinedButton(
+                onClick = { onTextChange("") },
+                modifier = Modifier.padding(2.dp),
+                enabled = text.isNotEmpty(),
+            ) {
+                Text("🗑 נקה", fontSize = 10.sp)
+            }
         }
         // אזור עריכה
         OutlinedTextField(
             value = text,
             onValueChange = onTextChange,
             modifier = Modifier.fillMaxSize(),
-            placeholder = { Text("הדבק כאן את הטקסט הגולמי...\n\nדוגמה:\nכותרת 1 - חלק ראשון\nכותרת 2 - סימן א\nזהו טקסט רגיל [וזו הערת שוליים].\nכותרת 7 - הערת צד\nזהו עוד טקסט.") },
+            placeholder = { Text("הדבק כאן את הטקסט הגולמי...\n\nדוגמה:\nכותרת 1 - חלק ראשון\nכותרת 2 - סימן א\nזהו טקסט רגיל [וזו הערת שוליים].\nכותרת 7 - הערת צד\nזהו עוד טקסט.\n\nאו לחץ על \"טען דוגמה\" למעלה.") },
             textStyle = androidx.compose.ui.text.TextStyle(
                 fontFamily = hebrewFont,
                 fontSize = 11.sp,
@@ -146,6 +161,37 @@ private fun EditorTab(text: String, onTextChange: (String) -> Unit) {
         )
     }
 }
+
+/**
+ * טקסט דוגמה להדגמת יכולות המערכת — מכיל כותרות מכל הרמות, הערות שוליים, והערות סיום.
+ */
+private val sampleText = """שם הספר - ספר הדוגמה
+נושא - הדגמת מערכת עימוד
+נושא מפורט - דוגמה מלאה לכל סוגי התוכן
+פרטי מהדורא - מהדורה ראשונה
+שם המחבר - מחבר לדוגמה
+מקום ושנת הוצאה - ירושלים תשפ"ו
+
+כותרת 1 - חלק ראשון: מבוא לעימוד תורני
+כותרת 2 - סימן א: כללי העימוד
+כותרת 3 - פרק ראשון: מבוא
+זהו טקסט רגיל המיועד להדגים את יכולות מערכת העימוד. המערכת תקרא את הטקסט הגולמי, תזהה את הכותרות לפי הדפוס "כותרת N - שם", ותחלק את הטקסט לעמודים ולטורים באופן אוטומטי. הערות שוליים מופיעות בתוך סוגריים מרובעים [כך], והן יופרדו מהטקסט ויוצגו בתחתית העמוד.
+
+זוהי פסקה שנייה הממחישה את יכולת המערכת לשבור שורות באופן אוטומטי בהתאם לרוחב הטור. המערכת משתמשת במודד טקסט (TextMeasurer) כדי לחשב את רוחב כל מילה ולשבור את השורות במקומות המתאימים [וזוהי הערת שוליים שנייה להדגמה]. המערכת גם תומכת בהערות סיום שמופיעות בסוף הספר.
+הערת סיום - זוהי הערת סיום להדגמה, המופרדת מהטקסט הראשי ותופיע באזור הערות הסיום בסוף הספר.
+
+כותרת 4 - תת-סעיף: דוגמה לכותרת משנית
+זהו טקסט נוסף הממחיש את המשך העימוד. המערכת תמשיך למלא את הטורים עד שתגיע לתחתית העמוד, ואז תעבור לעמוד הבא אוטומטית. האיזון בין הטורים יתבצע בסוף כל פרק כדי להבטיח שהטורים יהיו באותו גובה.
+
+כותרת 7 - הערת צד: דוגמה להערת צד
+זהו טקסט נוסף שבא אחרי הערת הצד. הערת הצד תופיע בשוליים ליד הטקסט הרלוונטי. המשך הטקסט יזרום באופן טבעי וימלא את הטורים בהתאם לרוחב ולגובה המוגדרים בהגדרות.
+
+כותרת 1 - חלק שני: פרקים מתקדמים
+כותרת 2 - סימן ב: עימוד מתקדם
+זהו תחילת החלק השני של הספר. שים לב שהמערכת פתחה עמוד חדש לחלק זה, בהתאם להגדרות ברירת המחדל שבהן כותרת רמה 1 פותחת עמוד חדש. המערכת גם תומכת בשערי משנה אוטומטיים, בתוכן עניינים, ובמספור עמודים בגימטריה [וזוהי הערה נוספת].
+
+המשך הטקסט בחלק השני, המדגים את יכולת המערכת להמשיך לעמד טקסט ארוך לאורך מספר עמודים. המערכת תשמור על רצף הפסקאות, תזהה יתומות ואלמנות, ותדווח עליהן בדו"ח הביקורת. המשתמש יכול לעבור לכרטיסיית "בדיקה" כדי לראות את כל הבעיות שזוהו.
+"""
 
 @Composable
 private fun SettingsTab(settings: TypesetterSettings, onSettingsChange: (TypesetterSettings) -> Unit) {
@@ -228,26 +274,95 @@ private fun AuditTab(result: TypesetResult?) {
         return
     }
     val issues = result.auditReport.issues
-    Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+    val scrollState = rememberScrollState()
+    Column(modifier = Modifier.fillMaxSize().padding(8.dp).verticalScroll(scrollState)) {
         Text("🔍 ביקורת עימוד", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
+
         if (issues.isEmpty()) {
-            Text("✅ לא נמצאו בעיות!", fontSize = 14.sp, color = androidx.compose.ui.graphics.Color.Green)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFE8F5E9),
+                ),
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("✓ אין בעיות!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFF2E7D32))
+                    Text("העימוד עבר את כל הבדיקות הגיאומטריות בהצלחה.", fontSize = 11.sp)
+                }
+            }
         } else {
-            Text("נמצאו ${issues.size} בעיות:", fontSize = 12.sp)
-            Spacer(Modifier.height(4.dp))
-            LazyColumn {
-                items(issues) { issue ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(2.dp)) {
-                        Column(modifier = Modifier.padding(4.dp)) {
-                            Text("עמוד ${issue.page} · ${issue.type}", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            Text(issue.description, fontSize = 9.sp)
+            // סיכום לפי סוג
+            val byType = issues.groupBy { it.type }
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFFFF8E1),
+                ),
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Text("סה״כ ${issues.size} בעיות ב-${issues.map { it.page }.distinct().size} עמודים:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    for ((type, typeIssues) in byType.entries.sortedByDescending { it.value.size }) {
+                        val severityColor = when (typeIssues.first().severity) {
+                            Severity.CRITICAL -> androidx.compose.ui.graphics.Color(0xFFC62828)
+                            Severity.MEDIUM -> androidx.compose.ui.graphics.Color(0xFFEF6C00)
+                            Severity.LOW -> androidx.compose.ui.graphics.Color(0xFF6A1B9A)
                         }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text("• ${typeLabel(type)}", fontSize = 10.sp, color = severityColor)
+                            Text("${typeIssues.size}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = severityColor)
+                        }
+                    }
+                }
+            }
+
+            // רשימת בעיות מפורטת
+            Text("פירוט:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            for (issue in issues.sortedBy { it.page }) {
+                val severityColor = when (issue.severity) {
+                    Severity.CRITICAL -> androidx.compose.ui.graphics.Color(0xFFC62828)
+                    Severity.MEDIUM -> androidx.compose.ui.graphics.Color(0xFFEF6C00)
+                    Severity.LOW -> androidx.compose.ui.graphics.Color(0xFF6A1B9A)
+                }
+                Card(modifier = Modifier.fillMaxWidth().padding(2.dp)) {
+                    Column(modifier = Modifier.padding(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text("עמוד ${issue.page}", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(typeLabel(issue.type), fontSize = 9.sp, color = severityColor)
+                            Text(issue.severity.name, fontSize = 8.sp, color = severityColor)
+                        }
+                        Text(issue.description, fontSize = 9.sp)
                     }
                 }
             }
         }
     }
+}
+
+private fun typeLabel(type: IssueType): String = when (type) {
+    IssueType.WIDOW -> "אלמנה"
+    IssueType.ORPHAN -> "יתומה"
+    IssueType.ORPHAN_HEADING -> "כותרת יתומה"
+    IssueType.IMBALANCED -> "טורים לא מאוזנים"
+    IssueType.OVERFLOW -> "גלישה"
+    IssueType.TOFU -> "תווים חסרים"
+    IssueType.OVERLAP -> "חפיפה"
+    IssueType.SPARSE_LINE -> "שורה דלילה"
+    IssueType.EMPTY_COLUMN -> "טור ריק"
+    IssueType.FOOTNOTE_MARKER -> "סמן הערה"
+    IssueType.FONT_FALLBACK -> "גופן חלופי"
+    IssueType.BROKEN_BRACKETS -> "סוגריים שבורים"
+    IssueType.TEXT_OUTSIDE_RANGE -> "טקסט מחוץ לטווח"
+    IssueType.SHORT_PAGE_BEFORE_H3 -> "עמוד קצר לפני כותרת"
+    IssueType.U_E000 -> "תו פרטי"
 }
 
 @Composable
@@ -264,8 +379,29 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("📖 ${result.pages.size} עמודים", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-        for (page in result.pages) {
+        // סרגל מידע
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("📖 ${result.pages.size} עמודים", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(16.dp))
+            val totalFootnotes = result.footnotes.values.sumOf { it.size }
+            if (totalFootnotes > 0) {
+                Text("📝 $totalFootnotes הערות שוליים", fontSize = 11.sp)
+                Spacer(Modifier.width(16.dp))
+            }
+            val issueCount = result.auditReport.issues.size
+            if (issueCount > 0) {
+                Text("⚠ $issueCount בעיות", fontSize = 11.sp, color = androidx.compose.ui.graphics.Color(0xFFB8860B))
+            } else {
+                Text("✓ אין בעיות", fontSize = 11.sp, color = androidx.compose.ui.graphics.Color(0xFF2E7D32))
+            }
+        }
+        for ((idx, page) in result.pages.withIndex()) {
+            // מספר עמוד לוגי מעל כל עמוד
+            Text("עמוד ${idx + 1}", fontSize = 9.sp, color = androidx.compose.ui.graphics.Color.Gray)
             PagePreview(page, settings)
         }
     }
@@ -273,14 +409,19 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
 
 @Composable
 private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
-    val pageWidth = (settings.pageSizeWidth * 2.5).dp // מוקטן לתצוגה
-    val pageHeight = (settings.pageSizeHeight * 2.5).dp
+    // מוקטן פי 3 מגודל A4 אמיתי (210x297mm)
+    val pageWidth = (settings.pageSizeWidth * 1.6).dp
+    val pageHeight = (settings.pageSizeHeight * 1.6).dp
 
     Card(
         modifier = Modifier
             .width(pageWidth)
             .height(pageHeight)
-            .padding(4.dp)
+            .padding(2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = androidx.compose.ui.graphics.Color.White,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(8.dp),
@@ -292,17 +433,17 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(headerContentToString(page.headerRow.right), fontSize = 7.sp)
-                    Text(headerContentToString(page.headerRow.center), fontSize = 7.sp)
-                    Text(headerContentToString(page.headerRow.left), fontSize = 7.sp)
+                    Text(headerContentToString(page.headerRow.right), fontSize = 6.sp)
+                    Text(headerContentToString(page.headerRow.center), fontSize = 6.sp)
+                    Text(headerContentToString(page.headerRow.left), fontSize = 6.sp)
                 }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 1.dp))
             }
 
             // טורים
             Row(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 for (column in page.columns) {
                     Column(
@@ -340,18 +481,19 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
 
             // הערות שוליים
             page.footnoteArea?.let { fnArea ->
-                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 1.dp))
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    fnArea.header?.let { Text(it, fontSize = 6.sp, fontWeight = FontWeight.Bold) }
+                    fnArea.header?.let { Text(it, fontSize = 5.sp, fontWeight = FontWeight.Bold) }
                     for (entry in fnArea.entries) {
-                        Text("${entry.marker}. ${entry.text}", fontSize = 6.sp)
+                        Text("${entry.marker}. ${entry.text}", fontSize = 5.sp, maxLines = 2)
                     }
                 }
             }
 
             // מספר עמוד
             page.pageNumberFooter?.let {
-                Text(it, fontSize = 8.sp)
+                Spacer(Modifier.height(2.dp))
+                Text(it, fontSize = 7.sp)
             }
         }
     }
