@@ -16,6 +16,8 @@ import com.suginach.typesetter.settings.TypesetterSettings
 
 enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 
+val hebrewFont = FontFamily("Noto Sans Hebrew", "Rubik", "sans-serif")
+
 @Composable
 fun App() {
     var currentTab by remember { mutableStateOf(Tab.EDITOR) }
@@ -24,7 +26,20 @@ fun App() {
     var typesetResult by remember { mutableStateOf<TypesetResult?>(null) }
     var isTypesetting by remember { mutableStateOf(false) }
 
-    MaterialTheme {
+    MaterialTheme(typography = MaterialTheme.typography.let { it.copy(
+        bodyLarge = it.bodyLarge.copy(fontFamily = hebrewFont),
+        bodyMedium = it.bodyMedium.copy(fontFamily = hebrewFont),
+        bodySmall = it.bodySmall.copy(fontFamily = hebrewFont),
+        titleLarge = it.titleLarge.copy(fontFamily = hebrewFont),
+        titleMedium = it.titleMedium.copy(fontFamily = hebrewFont),
+        titleSmall = it.titleSmall.copy(fontFamily = hebrewFont),
+        labelLarge = it.labelLarge.copy(fontFamily = hebrewFont),
+        labelMedium = it.labelMedium.copy(fontFamily = hebrewFont),
+        labelSmall = it.labelSmall.copy(fontFamily = hebrewFont),
+        headlineLarge = it.headlineLarge.copy(fontFamily = hebrewFont),
+        headlineMedium = it.headlineMedium.copy(fontFamily = hebrewFont),
+        headlineSmall = it.headlineSmall.copy(fontFamily = hebrewFont),
+    )}) {
         Column(modifier = Modifier.fillMaxSize()) {
             // סרגל כרטיסיות
             Row(
@@ -95,7 +110,7 @@ private fun EditorTab(text: String, onTextChange: (String) -> Unit) {
             modifier = Modifier.fillMaxSize(),
             placeholder = { Text("הדבק כאן את הטקסט הגולמי...\n\nדוגמה:\nכותרת 1 - חלק ראשון\nכותרת 2 - סימן א\nזהו טקסט רגיל [וזו הערת שוליים].\nכותרת 7 - הערת צד\nזהו עוד טקסט.") },
             textStyle = androidx.compose.ui.text.TextStyle(
-                fontFamily = FontFamily.Monospace,
+                fontFamily = hebrewFont,
                 fontSize = 11.sp,
                 textAlign = TextAlign.Right,
             ),
