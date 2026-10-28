@@ -16,7 +16,7 @@ import com.suginach.typesetter.settings.TypesetterSettings
 
 enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 
-val hebrewFont = FontFamily("Noto Sans Hebrew", "Rubik", FontFamily.SansSerif.familyName)
+val hebrewFont = FontFamily("Noto Sans Hebrew", "Rubik", "sans-serif")
 
 @Composable
 fun App() {
