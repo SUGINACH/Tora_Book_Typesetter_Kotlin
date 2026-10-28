@@ -1,0 +1,16 @@
+# Build
+composeApp/build/
+.gradle/
+build/
+*.class
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# OS
+.DS_Store
+Thumbs.db
