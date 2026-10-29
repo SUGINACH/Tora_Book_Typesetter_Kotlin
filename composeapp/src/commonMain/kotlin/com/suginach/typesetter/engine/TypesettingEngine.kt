@@ -67,10 +67,8 @@ class TypesettingEngine(
                 pageNumber++
             }
 
-            // תוכן עניינים מפורט (אם מופעל)
-            if (settings.enableDetailedToc) {
-                // TODO: יצירת עמוד תוכן עניינים מפורט
-            }
+            // תוכן עניינים מפורט (אם מופעל) — נבנה לאחר עימוד כל החלקים
+            // (ראה לאחר הלולאה)
 
             // עימוד הטוקנים של החלק
             val (pages, partEndnotes) = pageFiller.fillPages(
@@ -116,6 +114,11 @@ class TypesettingEngine(
             allPages.add(0, mainShaarPage)
         }
 
+        // בניית תוכן עניינים (אם מופעל) — לאחר עימוד כל החלקים
+        val tocEntry = if (settings.enableDetailedToc || settings.enableGeneralToc) {
+            buildTableOfContents(parts, allPages, settings)
+        } else null
+
         // שלב 9: ביקורת איכות
         emit(TypesetProgress.Auditing(0))
         val auditReport = auditor.audit(allPages, settings)
@@ -124,10 +127,75 @@ class TypesettingEngine(
             pages = allPages,
             footnotes = allFootnotes,
             endnotes = allEndnotes,
+            tableOfContents = tocEntry,
             auditReport = auditReport,
         )
 
         emit(TypesetProgress.Done(result))
+    }
+
+    /**
+     * בונה תוכן עניינים מתוך הכותרות שנמצאו בטקסט.
+     * משתמש במספרי העמודים שהוקצו לכל כותרת.
+     */
+    private fun buildTableOfContents(
+        parts: List<Part>,
+        pages: List<RenderedPage>,
+        settings: TypesetterSettings,
+    ): TocEntry {
+        val rootEntries = mutableListOf<TocEntry>()
+
+        for (part in parts) {
+            // מציאת הכותרת הראשית של החלק (רמה 1)
+            val h1 = part.tokens.firstOrNull { it is Token.HeadingToken && it.level == 1 }
+            if (h1 == null) continue
+
+            val h1Token = h1 as Token.HeadingToken
+            // חיפוש מספר העמוד של הכותרת — לפי האינדקס
+            val h1Page = pages.firstOrNull { page ->
+                page.bodyArea.mainArea.textArea.blocks.any { block ->
+                    when (block) {
+                        is TextBlock.HeadingSpan -> block.heading.text == h1Token.text && block.heading.level == 1
+                        else -> false
+                    }
+                }
+            }
+            val h1PageNum = h1Page?.pageNumber ?: ""
+
+            // איסוף כותרות משנה (רמות 2+)
+            val children = mutableListOf<TocEntry>()
+            for (token in part.tokens) {
+                if (token is Token.HeadingToken && token.level > 1 && token.level <= 3) {
+                    val subPage = pages.firstOrNull { page ->
+                        page.bodyArea.mainArea.textArea.blocks.any { block ->
+                            when (block) {
+                                is TextBlock.HeadingSpan -> block.heading.text == token.text && block.heading.level == token.level
+                                else -> false
+                            }
+                        }
+                    }
+                    children.add(TocEntry(
+                        title = token.text,
+                        pageNumber = subPage?.pageNumber ?: "",
+                        level = token.level,
+                    ))
+                }
+            }
+
+            rootEntries.add(TocEntry(
+                title = h1Token.text,
+                pageNumber = h1PageNum,
+                level = 1,
+                children = children,
+            ))
+        }
+
+        return TocEntry(
+            title = "תוכן עניינים",
+            pageNumber = "",
+            level = 0,
+            children = rootEntries,
+        )
     }
 
     private fun splitIntoParts(tokens: List<Token>): List<Part> {

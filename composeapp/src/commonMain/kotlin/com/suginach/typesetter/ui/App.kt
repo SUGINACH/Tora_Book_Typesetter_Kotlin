@@ -583,6 +583,23 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
             PagePreview(page, settings)
         }
 
+        // תוכן עניינים
+        result.tableOfContents?.let { toc ->
+            Spacer(Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
+                ),
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("📋 תוכן עניינים", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    TocEntryPreview(toc)
+                }
+            }
+        }
+
         // הערות סיום
         val totalEndnotes = result.endnotes.values.sumOf { it.size }
         if (totalEndnotes > 0) {
@@ -894,6 +911,37 @@ private fun headerContentToString(content: HeaderContent): String = when (conten
     is HeaderContent.Text -> content.text
     is HeaderContent.Ornament -> "✦"
     HeaderContent.Empty -> ""
+}
+
+/**
+ * תצוגה מקדימה של רשומת תוכן עניינים — רקורסיבית.
+ */
+@Composable
+private fun TocEntryPreview(entry: TocEntry) {
+    val font = hebrewFont()
+    val indent = (entry.level * 12).dp
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = indent, vertical = 1.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = entry.title,
+            fontSize = if (entry.level == 0) 13.sp else if (entry.level == 1) 12.sp else 11.sp,
+            fontWeight = if (entry.level <= 1) FontWeight.Bold else FontWeight.Normal,
+            fontFamily = font,
+        )
+        if (entry.pageNumber.isNotEmpty()) {
+            Text(
+                text = entry.pageNumber,
+                fontSize = 11.sp,
+                fontFamily = font,
+                color = androidx.compose.ui.graphics.Color.Gray,
+            )
+        }
+    }
+    for (child in entry.children) {
+        TocEntryPreview(child)
+    }
 }
 
 /** פורמט מספר עשרוני בלי String.format (לא זמין ב-wasmJs) */
