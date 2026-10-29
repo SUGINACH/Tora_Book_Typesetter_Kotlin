@@ -369,6 +369,28 @@ private fun SettingsTab(settings: TypesetterSettings, onSettingsChange: (Typeset
             }
         }
 
+        // כותרות עליונות
+        SettingsSection("כותרות עליונות") {
+            BooleanSettingRow("כותרות מתחלפות", settings.headerAlternating) { v ->
+                onSettingsChange(settings.copy(headerAlternating = v))
+            }
+            DropdownSettingRow("צד ימין", settings.headerRightType,
+                listOf("empty", "h1", "book_title", "h2", "h3")) { v ->
+                onSettingsChange(settings.copy(headerRightType = v))
+            }
+            DropdownSettingRow("מרכז", settings.headerCenterType,
+                listOf("empty", "h1", "book_title", "h2", "h3")) { v ->
+                onSettingsChange(settings.copy(headerCenterType = v))
+            }
+            DropdownSettingRow("צד שמאל", settings.headerLeftType,
+                listOf("empty", "h1", "book_title", "h2", "h3")) { v ->
+                onSettingsChange(settings.copy(headerLeftType = v))
+            }
+            BooleanSettingRow("עמודים אי-זוגיים", settings.ensureOddPageStart) { v ->
+                onSettingsChange(settings.copy(ensureOddPageStart = v))
+            }
+        }
+
         // גריד
         SettingsSection("גריד וטיפוגרפיה") {
             DropdownSettingRow("גודל עמוד", "${settings.pageSizeWidth.toInt()}×${settings.pageSizeHeight.toInt()}mm",

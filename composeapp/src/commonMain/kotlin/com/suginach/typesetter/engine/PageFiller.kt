@@ -459,6 +459,26 @@ class PageFiller(
             "empty" -> HeaderContent.Empty
             else -> HeaderContent.Empty
         }
+
+        // כותרות מתחלפות — עמודים אי-זוגיים מציגים ימין, זוגיים מציגים שמאל
+        if (settings.headerAlternating) {
+            return if (pageNum % 2 == 1) {
+                // עמוד אי-זוגי — כותרת ימין
+                HeaderRow(
+                    right = content(settings.headerRightType),
+                    center = HeaderContent.Empty,
+                    left = HeaderContent.Empty,
+                )
+            } else {
+                // עמוד זוגי — כותרת שמאל
+                HeaderRow(
+                    right = HeaderContent.Empty,
+                    center = HeaderContent.Empty,
+                    left = content(settings.headerLeftType),
+                )
+            }
+        }
+
         return HeaderRow(
             right = content(settings.headerRightType),
             center = content(settings.headerCenterType),
