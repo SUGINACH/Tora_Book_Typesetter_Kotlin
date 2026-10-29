@@ -691,7 +691,11 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
         modifier = Modifier
             .width(pageWidth)
             .height(pageHeight)
-            .padding(2.dp),
+            .padding(2.dp)
+            .border(
+                width = if (page.role == PageRole.SHAAR_MAIN || page.role == PageRole.SHAAR_BACK) 2.dp else 0.dp,
+                color = parseColor(theme.borderColor),
+            ),
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor,
         ),
