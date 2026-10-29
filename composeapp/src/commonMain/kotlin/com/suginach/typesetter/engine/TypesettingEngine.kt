@@ -131,6 +131,12 @@ class TypesettingEngine(
             allPages.addAll(insertIndex, tocPages)
         }
 
+        // שער אחורי (אם מופעל) — בסוף הספר
+        if (settings.showBackShaar) {
+            val backShaarPage = createBackShaarPage(allPages.size, metadata, settings)
+            allPages.add(backShaarPage)
+        }
+
         // שלב 9: ביקורת איכות
         emit(TypesetProgress.Auditing(0))
         val auditReport = auditor.audit(allPages, settings)
@@ -404,6 +410,76 @@ class TypesettingEngine(
             index = pageNum,
             pageNumber = gematriaConverter.toGematria(pageNum),
             role = PageRole.SHAAR_SUB,
+            bodyArea = bodyArea,
+        )
+    }
+
+    /**
+     * שער אחורי — בסוף הספר, מכיל פרטי זכויות יוצרים, הוצאה לאור, וקשר.
+     */
+    private fun createBackShaarPage(pageNum: Int, metadata: BookMetadata, settings: TypesetterSettings): RenderedPage {
+        val shaarParagraphs = mutableListOf<Paragraph>()
+
+        // רווח עליון גדול
+        for (i in 1..6) {
+            shaarParagraphs.add(Paragraph(
+                text = "",
+                lines = listOf(ParagraphLine("", isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+            ))
+        }
+
+        // שמירת זכויות
+        if (metadata.backCopyright.isNotEmpty()) {
+            shaarParagraphs.add(Paragraph(
+                text = metadata.backCopyright,
+                lines = listOf(ParagraphLine(metadata.backCopyright, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+                headingStyle = HeadingStyle(level = 2, fontSizePt = 11, isBold = false, spaceBeforePt = 10, spaceAfterPt = 5, alignment = TextAlignment.CENTER),
+            ))
+        }
+
+        // פרטי הוצאה לאור
+        if (metadata.backPublishing.isNotEmpty()) {
+            shaarParagraphs.add(Paragraph(
+                text = metadata.backPublishing,
+                lines = listOf(ParagraphLine(metadata.backPublishing, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+                headingStyle = HeadingStyle(level = 3, fontSizePt = 10, isBold = false, spaceBeforePt = 5, spaceAfterPt = 5, alignment = TextAlignment.CENTER),
+            ))
+        }
+
+        // פרטי קשר
+        if (metadata.backContact.isNotEmpty()) {
+            shaarParagraphs.add(Paragraph(
+                text = metadata.backContact,
+                lines = listOf(ParagraphLine(metadata.backContact, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+                headingStyle = HeadingStyle(level = 3, fontSizePt = 10, isBold = false, spaceBeforePt = 5, spaceAfterPt = 5, alignment = TextAlignment.CENTER),
+            ))
+        }
+
+        // פרטים נוספים
+        if (metadata.backExtra.isNotEmpty()) {
+            shaarParagraphs.add(Paragraph(
+                text = metadata.backExtra,
+                lines = listOf(ParagraphLine(metadata.backExtra, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+                headingStyle = HeadingStyle(level = 3, fontSizePt = 10, isBold = false, spaceBeforePt = 5, spaceAfterPt = 5, alignment = TextAlignment.CENTER),
+            ))
+        }
+
+        // רווח תחתון
+        for (i in 1..3) {
+            shaarParagraphs.add(Paragraph(
+                text = "",
+                lines = listOf(ParagraphLine("", isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+            ))
+        }
+
+        val textArea = TextArea(blocks = listOf(TextBlock.SingleColumn(shaarParagraphs)))
+        val mainArea = MainArea(textArea = textArea)
+        val bodyArea = BodyArea(mainArea = mainArea)
+
+        return RenderedPage(
+            index = pageNum,
+            pageNumber = gematriaConverter.toGematria(pageNum),
+            role = PageRole.SHAAR_BACK,
             bodyArea = bodyArea,
         )
     }
