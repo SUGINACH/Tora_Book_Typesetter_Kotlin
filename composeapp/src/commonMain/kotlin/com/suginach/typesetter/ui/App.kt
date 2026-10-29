@@ -56,9 +56,19 @@ fun App() {
     var typesetResult by remember { mutableStateOf<TypesetResult?>(null) }
     var isTypesetting by remember { mutableStateOf(false) }
     var progressText by remember { mutableStateOf("") }
+    var fontsLoaded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val engine = remember { TypesettingEngine(WasmJsTextMeasurer()) }
     val font = hebrewFont()
+
+    // חוק 3: המתנה לטעינת פונט לפני איפשור עימוד
+    // ה-Font() composable טוען פונטים אסינכרונית. אם המנוע ירוץ לפני שהפונט נטען,
+    // המדידות יהיו שגויות. כאן אנחנו מסמנים שהפונט זמין לאחר פריים אחד.
+    LaunchedEffect(font) {
+        // המתנה קצרה לוודא שהפונט נטען ב-Compose
+        kotlinx.coroutines.delay(100)
+        fontsLoaded = true
+    }
 
     // אילוץ כיוון ימני (RTL) עבור כל ה-UI — חיוני לעברית
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -118,7 +128,7 @@ fun App() {
                             }
                         }
                     },
-                    enabled = rawText.isNotBlank() && !isTypesetting
+                    enabled = rawText.isNotBlank() && !isTypesetting && fontsLoaded
                 ) {
                     Text(if (isTypesetting) "⏳ $progressText" else "⚡ עמד")
                 }
