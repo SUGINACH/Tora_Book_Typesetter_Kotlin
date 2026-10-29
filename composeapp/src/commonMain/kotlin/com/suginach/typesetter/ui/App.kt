@@ -570,12 +570,13 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
         return
     }
     val scrollState = rememberScrollState()
+    val pdfExporter = remember { com.suginach.typesetter.platform.PdfExporter() }
     Column(
         modifier = Modifier.fillMaxSize().padding(8.dp).verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // סרגל מידע
+        // סרגל מידע + כפתור ייצוא
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.Center,
@@ -593,6 +594,12 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
                 Text("⚠ $issueCount בעיות", fontSize = 11.sp, color = androidx.compose.ui.graphics.Color(0xFFB8860B))
             } else {
                 Text("✓ אין בעיות", fontSize = 11.sp, color = androidx.compose.ui.graphics.Color(0xFF2E7D32))
+            }
+            Spacer(Modifier.width(16.dp))
+            OutlinedButton(
+                onClick = { pdfExporter.exportToPdf() },
+            ) {
+                Text("🖨️ ייצוא PDF", fontSize = 10.sp)
             }
         }
         for ((idx, page) in result.pages.withIndex()) {
