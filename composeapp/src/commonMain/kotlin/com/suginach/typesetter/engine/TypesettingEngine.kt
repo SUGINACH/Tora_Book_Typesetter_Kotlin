@@ -104,7 +104,7 @@ class TypesettingEngine(
 
             // איסוף הערות שוליים — מפתח String (חוק ברזל: איסור Int כמפתח)
             for (page in processedPages) {
-                page.footnoteArea?.let { area ->
+                page.bodyArea.footnoteArea?.let { area ->
                     allFootnotes[page.index.toString()] = area.entries
                 }
             }
