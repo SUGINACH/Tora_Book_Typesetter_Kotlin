@@ -135,6 +135,9 @@ private fun TabButton(label: String, tab: Tab, current: Tab, onClick: (Tab) -> U
 
 @Composable
 private fun EditorTab(text: String, onTextChange: (String) -> Unit) {
+    val fileImporter = remember { com.suginach.typesetter.platform.FileImporter() }
+    val scope = rememberCoroutineScope()
+
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         // סרגל כלים
         Row(
@@ -145,6 +148,20 @@ private fun EditorTab(text: String, onTextChange: (String) -> Unit) {
             Text("סה״כ שורות: ${text.lines().size}", fontSize = 10.sp)
             Text("סה״כ תווים: ${text.length}", fontSize = 10.sp)
             Spacer(Modifier.weight(1f))
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        fileImporter.importTextFile { content ->
+                            if (content != null) {
+                                onTextChange(content)
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.padding(2.dp),
+            ) {
+                Text("📂 ייבוא", fontSize = 10.sp)
+            }
             OutlinedButton(
                 onClick = { onTextChange(sampleText) },
                 modifier = Modifier.padding(2.dp),

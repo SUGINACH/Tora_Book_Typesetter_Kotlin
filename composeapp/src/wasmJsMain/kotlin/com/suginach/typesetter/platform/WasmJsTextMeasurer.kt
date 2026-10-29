@@ -2,37 +2,49 @@ package com.suginach.typesetter.platform
 
 import kotlinx.browser.document
 import org.w3c.dom.HTMLCanvasElement
+import org.w3c.dom.canvas.CanvasRenderingContext2D
+import org.w3c.dom.canvas.ContextType2D
+import kotlin.js.json
 
+/**
+ * מדידת טקסט אמיתית דרך Canvas 2D API.
+ *
+ * משתמש ב-context.measureText() של HTML5 Canvas למדידה מדויקת
+ * של רוחב טקסט בפיקסלים, כולל התחשבות בפונט, גודל, ומשקל.
+ *
+ * חוק ברזל (מוקש 2 באפיון): מדידת רוחב האותיות והמילים לצורך
+ * אלגוריתם שבירת השורות תתבצע ב-commonMain באמצעות TextMeasurer
+ * המסתמך על קובץ ה-Font Asset.
+ *
+ * המדידה מתבצעת על Main thread (Canvas API), אבל התוצאות נשמרות
+ * ב-cache פנימי כדי למנוע מדידות חוזרות.
+ */
 actual class WasmJsTextMeasurer : TextMeasurer {
     private val canvas = document.createElement("canvas") as HTMLCanvasElement
+    private val ctx: CanvasRenderingContext2D = canvas.getContext(ContextType2D.string) as CanvasRenderingContext2D
 
-    /**
-     * מדידת רוחב טקסט — approximation משופר המתחשב בתווים רחבים/צרים בעברית.
-     *
-     * מוקש 2 באפיון: בעתיד יש להחליף ב-Compose TextMeasurer אמיתי.
-     * כרגע משתמשים ב-approximation כי Compose TextMeasurer דורש @Composable
-     * context ולא יכול לרוץ ברקע על Dispatchers.Default.
-     *
-     * רוחב יחסי לגודל פונט:
-     * - אותיות רגילות: 0.55
-     * - אותיות רחבות (ש, ט, נ, ם, מ): 0.70
-     * - אותיות צרות (י, ו, ן): 0.35
-     * - ניקוד וטעמים: 0.0 (לא תופסים רוחב אופקי משמעותי)
-     */
+    // Cache למדידות — מונע מדידות חוזרות של אותה מילה
+    private val widthCache = mutableMapOf<String, Double>()
+
     override fun measureWidth(text: String, fontFamily: String, fontSizePt: Int, fontWeight: String): Double {
-        var totalWidth = 0.0
-        for (c in text) {
-            totalWidth += charWidthRatio(c) * fontSizePt
-        }
-        // הוספת רוחב Bold
-        if (fontWeight == "bold" || fontWeight == "700") {
-            totalWidth *= 1.05
-        }
-        return totalWidth
+        val cacheKey = "$text|$fontFamily|$fontSizePt|$fontWeight"
+        widthCache[cacheKey]?.let { return it }
+
+        // הגדרת הפונט ב-context
+        val weight = if (fontWeight == "bold" || fontWeight == "700") "bold" else "normal"
+        ctx.font = "$weight ${fontSizePt}px $fontFamily, sans-serif"
+
+        // מדידה אמיתית דרך Canvas API
+        val metrics = ctx.measureText(text)
+        val width = metrics.width
+
+        widthCache[cacheKey] = width
+        return width
     }
 
     override fun measureLineHeight(fontFamily: String, fontSizePt: Int, lineHeight: Double): Double {
-        return fontSizePt * 1.333 * lineHeight
+        // גובה שורה = גודל פונט × 1.2 (ascent + descent) × lineHeight
+        return fontSizePt * 1.2 * lineHeight
     }
 
     override fun breakParagraphIntoLines(
@@ -42,9 +54,12 @@ actual class WasmJsTextMeasurer : TextMeasurer {
         fontSizePt: Int,
         lineHeight: Double
     ): List<String> {
-        // חוק 2: פיצול לפי רווחים ללא Regex — שימוש ב-split עם רווח יחיד
+        // חוק 2: פיצול לפי רווחים ללא Regex
         val words = splitByWhitespace(text).filter { it.isNotEmpty() }
         if (words.isEmpty()) return emptyList()
+
+        // מדידת רוחב רווח
+        val spaceWidth = measureWidth(" ", fontFamily, fontSizePt)
 
         val lines = mutableListOf<String>()
         var currentLine = StringBuilder()
@@ -52,7 +67,6 @@ actual class WasmJsTextMeasurer : TextMeasurer {
 
         for (word in words) {
             val wordWidth = measureWidth(word, fontFamily, fontSizePt)
-            val spaceWidth = fontSizePt * 0.3 // רוחב רווח
 
             if (currentLine.isEmpty()) {
                 currentLine.append(word)
@@ -70,46 +84,6 @@ actual class WasmJsTextMeasurer : TextMeasurer {
             lines.add(currentLine.toString())
         }
         return lines
-    }
-
-    /**
-     * רוחב יחסי של תו ביחס לגודל פונט.
-     * מבוסס על Frank-Ruehl — פונט עברי רגיל.
-     */
-    private fun charWidthRatio(c: Char): Double {
-        // ניקוד וטעמים — לא תופסים רוחב אופקי
-        val code = c.code
-        if (code in 0x05B0..0x05C7 || code in 0x0591..0x05AF) return 0.0
-
-        // אותיות רחבות בעברית
-        when (c) {
-            'ש', 'ט', 'נ', 'ם', 'מ', 'ע', 'צ', 'ץ' -> return 0.70
-            // אותיות צרות בעברית
-            'י', 'ו', 'ן' -> return 0.35
-            // רווח
-            ' ' -> return 0.30
-        }
-
-        // אותיות לטיניות — רוחב ממוצע
-        if (c in 'a'..'z' || c in 'A'..'Z') {
-            return when (c.lowercaseChar()) {
-                'i', 'l', 'j' -> 0.30
-                'm', 'w' -> 0.80
-                else -> 0.55
-            }
-        }
-
-        // ספרות
-        if (c in '0'..'9') return 0.55
-
-        // סימני פיסוק — טיפול ידני כדי למנוע בעיות escape
-        return when (c) {
-            '.', ',', ':', ';' -> 0.30
-            '\'', '\"' -> 0.30
-            '(', ')', '[', ']' -> 0.35
-            '-', '–', '—' -> 0.40
-            else -> 0.55
-        }
     }
 
     /**

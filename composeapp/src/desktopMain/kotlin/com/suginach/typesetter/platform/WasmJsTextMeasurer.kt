@@ -1,24 +1,36 @@
 package com.suginach.typesetter.platform
 
+import java.awt.Font
+import java.awt.font.FontRenderContext
+import java.awt.image.BufferedImage
+
 /**
- * מימוש Desktop של TextMeasurer.
- * משתמש באותו approximation כמו wasmJs — חישוב רוחב לפי תווים.
- * בעתיד ניתן להחליף ב-Compose TextMeasurer האמיתי דרך AWT FontMetrics.
+ * מדידת טקסט אמיתית דרך AWT FontMetrics ב-desktop.
+ *
+ * משתמש ב-Java AWT למדידה מדויקת של רוחב טקסט בפיקסלים,
+ * כולל התחשבות בפונט, גודל, ומשקל.
  */
 actual class WasmJsTextMeasurer : TextMeasurer {
+    private val img = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
+    private val g2d = img.createGraphics()
+    private val frc = FontRenderContext(null, true, true)
+    private val widthCache = mutableMapOf<String, Double>()
+
     override fun measureWidth(text: String, fontFamily: String, fontSizePt: Int, fontWeight: String): Double {
-        var totalWidth = 0.0
-        for (c in text) {
-            totalWidth += charWidthRatio(c) * fontSizePt
-        }
-        if (fontWeight == "bold" || fontWeight == "700") {
-            totalWidth *= 1.05
-        }
-        return totalWidth
+        val cacheKey = "$text|$fontFamily|$fontSizePt|$fontWeight"
+        widthCache[cacheKey]?.let { return it }
+
+        val style = if (fontWeight == "bold" || fontWeight == "700") Font.BOLD else Font.PLAIN
+        val font = Font(fontFamily, style, fontSizePt)
+        val textLayout = java.awt.font.TextLayout(text, font, frc)
+        val width = textLayout.advance
+
+        widthCache[cacheKey] = width
+        return width
     }
 
     override fun measureLineHeight(fontFamily: String, fontSizePt: Int, lineHeight: Double): Double {
-        return fontSizePt * 1.333 * lineHeight
+        return fontSizePt * 1.2 * lineHeight
     }
 
     override fun breakParagraphIntoLines(
@@ -31,13 +43,14 @@ actual class WasmJsTextMeasurer : TextMeasurer {
         val words = splitByWhitespace(text).filter { it.isNotEmpty() }
         if (words.isEmpty()) return emptyList()
 
+        val spaceWidth = measureWidth(" ", fontFamily, fontSizePt)
+
         val lines = mutableListOf<String>()
         var currentLine = StringBuilder()
         var currentWidth = 0.0
 
         for (word in words) {
             val wordWidth = measureWidth(word, fontFamily, fontSizePt)
-            val spaceWidth = fontSizePt * 0.3
 
             if (currentLine.isEmpty()) {
                 currentLine.append(word)
@@ -55,35 +68,6 @@ actual class WasmJsTextMeasurer : TextMeasurer {
             lines.add(currentLine.toString())
         }
         return lines
-    }
-
-    private fun charWidthRatio(c: Char): Double {
-        val code = c.code
-        if (code in 0x05B0..0x05C7 || code in 0x0591..0x05AF) return 0.0
-
-        when (c) {
-            'ש', 'ט', 'נ', 'ם', 'מ', 'ע', 'צ', 'ץ' -> return 0.70
-            'י', 'ו', 'ן' -> return 0.35
-            ' ' -> return 0.30
-        }
-
-        if (c in 'a'..'z' || c in 'A'..'Z') {
-            return when (c.lowercaseChar()) {
-                'i', 'l', 'j' -> 0.30
-                'm', 'w' -> 0.80
-                else -> 0.55
-            }
-        }
-
-        if (c in '0'..'9') return 0.55
-
-        return when (c) {
-            '.', ',', ':', ';' -> 0.30
-            '\'', '\"' -> 0.30
-            '(', ')', '[', ']' -> 0.35
-            '-', '–', '—' -> 0.40
-            else -> 0.55
-        }
     }
 
     private fun splitByWhitespace(text: String): List<String> {
