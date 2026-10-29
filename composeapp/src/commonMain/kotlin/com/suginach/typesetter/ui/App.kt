@@ -837,6 +837,7 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
 @Composable
 private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
     val font = hebrewFont()
+    val theme = com.suginach.typesetter.settings.BookTheme.byId(settings.activeTheme)
     when (block) {
         is TextBlock.TwoColumn -> {
             // שני טורים שווים ברוחבם ומאוזנים בגובהם

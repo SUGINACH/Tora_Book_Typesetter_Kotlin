@@ -11,7 +11,8 @@ import org.w3c.files.BlobPropertyBag
  */
 actual class TextExporter {
     actual fun exportText(text: String, suggestedName: String) {
-        val blob = Blob(arrayOf(text), BlobPropertyBag(type = "text/plain;charset=utf-8"))
+        // יצירת Blob עם הטקסט
+        val blob = Blob(arrayOf(text).toTypedArray(), BlobPropertyBag(type = "text/plain;charset=utf-8"))
         val url = URL.createObjectURL(blob)
         val a = document.createElement("a") as HTMLAnchorElement
         a.href = url
