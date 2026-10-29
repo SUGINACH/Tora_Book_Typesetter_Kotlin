@@ -110,6 +110,20 @@ class TypesettingEngine(
                     allFootnotes[page.index.toString()] = area.entries
                 }
             }
+
+            // עמודים אי-זוגיים — כותרת רמה 1 חייבת להתחיל בעמוד אי-זוגי
+            if (settings.ensureOddPageStart) {
+                val lastPageNum = allPages.lastOrNull()?.index ?: 0
+                if (lastPageNum % 2 == 0 && partIdx < parts.size - 1) {
+                    // הוספת עמוד ריק
+                    allPages.add(RenderedPage(
+                        index = lastPageNum + 1,
+                        pageNumber = gematriaConverter.toGematria(lastPageNum + 1),
+                        role = PageRole.REGULAR,
+                    ))
+                    pageNumber++
+                }
+            }
         }
 
         // שער ראשי (אם מופעל)

@@ -154,6 +154,9 @@ data class TypesetterSettings(
     val chapterEndOrnament: String = "stars",
     val chapterEndOrnamentCount: Int = 3,
 
+    // עמודים אי-זוגיים
+    val ensureOddPageStart: Boolean = true,
+
     // כותרות עליונות
     val headerRightType: String = "h1",
     val headerCenterType: String = "book_title",

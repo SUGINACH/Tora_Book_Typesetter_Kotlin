@@ -36,7 +36,9 @@ class TypesetterViewModel {
     private val _rawText = mutableStateOf("")
     val rawText: State<String> = _rawText
 
-    private val _settings = mutableStateOf(TypesetterSettings.default())
+    private val settingsStorage = com.suginach.typesetter.platform.SettingsStorage()
+
+    private val _settings = mutableStateOf(settingsStorage.load() ?: TypesetterSettings.default())
     val settings: State<TypesetterSettings> = _settings
 
     private val _typesetResult = mutableStateOf<TypesetResult?>(null)
@@ -59,9 +61,10 @@ class TypesetterViewModel {
         _rawText.value = text
     }
 
-    /** עדכון הגדרות */
+    /** עדכון הגדרות — שומר אוטומטית לאחסון */
     fun updateSettings(settings: TypesetterSettings) {
         _settings.value = settings
+        settingsStorage.save(settings)
     }
 
     /** סימון שהפונטים נטענו */
