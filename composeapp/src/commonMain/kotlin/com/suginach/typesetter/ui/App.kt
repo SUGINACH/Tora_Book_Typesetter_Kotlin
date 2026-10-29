@@ -9,6 +9,9 @@ import androidx.compose.ui.*
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.*
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -852,15 +855,15 @@ private fun ParagraphPreview(para: Paragraph, settings: TypesetterSettings) {
 
             // בניית annotatedString עם מילה ראשונה מוגדלת (אם רלוונטי)
             val hasFirstWord = idx == 0 && para.firstWord != null && para.firstWordStyle != null && line.text.startsWith(para.firstWord)
-            val annotated = androidx.compose.ui.text.buildAnnotatedString {
+            val annotated = buildAnnotatedString {
                 if (hasFirstWord) {
                     val fwStyle = para.firstWordStyle
-                    withStyle(androidx.compose.ui.text.SpanStyle(
+                    withStyle(SpanStyle(
                         fontSize = (fwStyle.fontSizePt * 0.55).sp,
                         fontWeight = if (fwStyle.isBold) FontWeight.Bold else FontWeight.Normal,
                         fontFamily = font,
                         // חלון תחת מילה ראשונה — textDecoration עם קו תחתון
-                        textDecoration = if (fwStyle.hasWindow) androidx.compose.ui.text.style.TextDecoration.Underline else null,
+                        textDecoration = if (fwStyle.hasWindow) TextDecoration.Underline else null,
                     )) {
                         append(para.firstWord)
                     }
