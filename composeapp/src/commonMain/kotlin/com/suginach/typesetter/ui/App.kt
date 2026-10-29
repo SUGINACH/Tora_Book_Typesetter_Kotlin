@@ -137,6 +137,7 @@ private fun TabButton(label: String, tab: Tab, current: Tab, onClick: (Tab) -> U
 @Composable
 private fun EditorTab(text: String, onTextChange: (String) -> Unit) {
     val fileImporter = remember { com.suginach.typesetter.platform.FileImporter() }
+    val textExporter = remember { com.suginach.typesetter.platform.TextExporter() }
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
@@ -162,6 +163,13 @@ private fun EditorTab(text: String, onTextChange: (String) -> Unit) {
                 modifier = Modifier.padding(2.dp),
             ) {
                 Text("📂 ייבוא", fontSize = 10.sp)
+            }
+            OutlinedButton(
+                onClick = { textExporter.exportText(text, "typeset.txt") },
+                modifier = Modifier.padding(2.dp),
+                enabled = text.isNotEmpty(),
+            ) {
+                Text("💾 ייצוא", fontSize = 10.sp)
             }
             OutlinedButton(
                 onClick = { onTextChange(sampleText) },
@@ -787,11 +795,40 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
                 }
             }
 
-            // 3. כותרת תחתונה (מספר עמוד)
+            // 3. כותרת תחתונה (מספר עמוד) — עם מסגרת אם מוגדרת
             val footerFont = hebrewFont()
             page.footerRow?.let { footer ->
                 Spacer(Modifier.height(2.dp))
-                Text(footer.pageNumber, fontSize = 7.sp, fontFamily = footerFont)
+                val footerAlign = when (settings.pageNumPosition) {
+                    "bottom_left" -> Alignment.CenterHorizontally
+                    "bottom_right" -> Alignment.CenterHorizontally
+                    else -> Alignment.CenterHorizontally
+                }
+                val footerArrangement = when (settings.pageNumPosition) {
+                    "bottom_left" -> Arrangement.Start
+                    "bottom_right" -> Arrangement.End
+                    else -> Arrangement.Center
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = footerArrangement,
+                ) {
+                    if (settings.pageNumFrame != "none") {
+                        // מסגרת סביב מספר העמוד
+                        Box(
+                            modifier = Modifier
+                                .border(
+                                    width = 1.dp,
+                                    color = parseColor(theme.borderColor),
+                                )
+                                .padding(horizontal = 4.dp, vertical = 1.dp),
+                        ) {
+                            Text(footer.pageNumber, fontSize = 7.sp, fontFamily = footerFont)
+                        }
+                    } else {
+                        Text(footer.pageNumber, fontSize = 7.sp, fontFamily = footerFont)
+                    }
+                }
             }
         }
     }
@@ -814,6 +851,22 @@ private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
                 ) {
                     for (para in block.rightParagraphs) {
                         ParagraphPreview(para, settings)
+                    }
+                }
+                // מחלק טורים (אם מוגדר)
+                if (settings.columnDivider != "none") {
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .background(parseColor(theme.borderColor).copy(alpha = 0.3f)),
+                        )
                     }
                 }
                 // טור שמאלי
