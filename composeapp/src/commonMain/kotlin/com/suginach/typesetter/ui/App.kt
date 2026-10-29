@@ -282,6 +282,28 @@ private fun SettingsTab(settings: TypesetterSettings, onSettingsChange: (Typeset
             SettingRow("גופן") { Text(settings.bodyFont, fontSize = 10.sp) }
         }
 
+        // מילה ראשונה
+        SettingsSection("מילה ראשונה מוגדלת") {
+            DropdownSettingRow("מצב", settings.firstWordMode, listOf("none", "window", "enlarged")) { v ->
+                onSettingsChange(settings.copy(firstWordMode = v))
+            }
+            DoubleSettingRow("גודל יחסי", settings.firstWordSize, 1.0..3.0, 0.1) { v ->
+                onSettingsChange(settings.copy(firstWordSize = v))
+            }
+            IntSettingRow("מספר מילים", settings.firstWordCount, 1..5) { v ->
+                onSettingsChange(settings.copy(firstWordCount = v))
+            }
+            IntSettingRow("מינימום שורות", settings.firstWordMinLines, 1..5) { v ->
+                onSettingsChange(settings.copy(firstWordMinLines = v))
+            }
+            BooleanSettingRow("מודגש", settings.firstWordBold) { v ->
+                onSettingsChange(settings.copy(firstWordBold = v))
+            }
+            BooleanSettingRow("חלון תחת מילה", settings.firstWordHasWindow) { v ->
+                onSettingsChange(settings.copy(firstWordHasWindow = v))
+            }
+        }
+
         // הגדרות הערות
         SettingsSection("הערות") {
             StringSettingRow("תו פתיחה", settings.footnoteDelimOpen) { v ->
