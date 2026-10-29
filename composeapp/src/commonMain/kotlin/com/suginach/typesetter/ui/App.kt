@@ -650,13 +650,21 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
     val pageWidth = (settings.pageSizeWidth * 1.6).dp
     val pageHeight = (settings.pageSizeHeight * 1.6).dp
 
+    // צבע רקע מיוחד לשערים
+    val backgroundColor = when (page.role) {
+        PageRole.SHAAR_MAIN, PageRole.SHAAR_BACK -> androidx.compose.ui.graphics.Color(0xFFFFF8E1)
+        PageRole.SHAAR_SUB -> androidx.compose.ui.graphics.Color(0xFFF5F5DC)
+        PageRole.TOC_GENERAL, PageRole.TOC_DETAILED -> androidx.compose.ui.graphics.Color(0xFFF0F4F8)
+        else -> androidx.compose.ui.graphics.Color.White
+    }
+
     Card(
         modifier = Modifier
             .width(pageWidth)
             .height(pageHeight)
             .padding(2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = androidx.compose.ui.graphics.Color.White,
+            containerColor = backgroundColor,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {

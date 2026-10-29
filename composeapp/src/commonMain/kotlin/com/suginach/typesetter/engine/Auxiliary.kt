@@ -362,3 +362,95 @@ class GeometryAuditor {
         }
     }
 }
+
+/**
+ * יישור אנכי — מותח רווחים בין פסקאות כדי למלא את גובה העמוד.
+ *
+ * חוק ברזל (מוקש 4 חלק 5): יישור אנכי יופעל אך ורק אם העמוד מלא
+ * בלפחות 75% מגובהו. עמודים דלילים יותר (כמו סופי פרקים) יישארו
+ * חצי ריקים ולא יימתחו, כדי למנוע עיוותים אסתטיים.
+ */
+class VerticalJustifier {
+    /**
+     * מיישר אנכית את הטורים בעמוד אם העמוד מלא מספיק.
+     * @param page העמוד ליישור
+     * @param settings הגדרות
+     * @param bodyHeightPx גובה הגוף הזמין בפיקסלים
+     * @return עמוד מיושר אנכית (או המקורי אם לא מתאים)
+     */
+    fun justify(page: RenderedPage, settings: TypesetterSettings, bodyHeightPx: Double): RenderedPage {
+        val blocks = page.bodyArea.mainArea.textArea.blocks
+        if (blocks.isEmpty()) return page
+
+        // חישוב גובה מילוי נוכחי
+        val totalUsedHeight = calculateUsedHeight(blocks)
+        val fillRatio = totalUsedHeight / bodyHeightPx
+
+        // חוק ברזל: אל תמתח אם מתחת ל-75%
+        if (fillRatio < 0.75) return page
+
+        // חישוב הרווח הנוסף לחלק
+        val extraSpace = bodyHeightPx - totalUsedHeight
+        if (extraSpace <= 0) return page
+
+        // חלוקת הרווח הנוסף בין הפסקאות
+        val totalParagraphs = blocks.sumOf { block ->
+            when (block) {
+                is TextBlock.TwoColumn -> maxOf(block.rightParagraphs.size, block.leftParagraphs.size)
+                is TextBlock.SingleColumn -> block.paragraphs.size
+                else -> 0
+            }
+        }
+        if (totalParagraphs == 0) return page
+
+        val extraSpacePerParagraph = extraSpace / totalParagraphs
+
+        // הוספת רווח נוסף לכל פסקה
+        val newBlocks = blocks.map { block ->
+            when (block) {
+                is TextBlock.TwoColumn -> block.copy(
+                    rightParagraphs = addExtraSpacing(block.rightParagraphs, extraSpacePerParagraph),
+                    leftParagraphs = addExtraSpacing(block.leftParagraphs, extraSpacePerParagraph),
+                )
+                is TextBlock.SingleColumn -> block.copy(
+                    paragraphs = addExtraSpacing(block.paragraphs, extraSpacePerParagraph),
+                )
+                else -> block
+            }
+        }
+
+        val newTextArea = page.bodyArea.mainArea.textArea.copy(blocks = newBlocks)
+        val newMainArea = page.bodyArea.mainArea.copy(textArea = newTextArea)
+        val newBodyArea = page.bodyArea.copy(mainArea = newMainArea)
+        return page.copy(bodyArea = newBodyArea)
+    }
+
+    private fun calculateUsedHeight(blocks: List<TextBlock>): Double {
+        var height = 0.0
+        for (block in blocks) {
+            when (block) {
+                is TextBlock.TwoColumn -> {
+                    val rightHeight = block.rightParagraphs.sumOf { it.lines.size } * 16.0
+                    val leftHeight = block.leftParagraphs.sumOf { it.lines.size } * 16.0
+                    height += maxOf(rightHeight, leftHeight)
+                }
+                is TextBlock.SingleColumn -> {
+                    height += block.paragraphs.sumOf { it.lines.size } * 16.0
+                }
+                is TextBlock.HeadingSpan -> height += 24.0
+                is TextBlock.Divider -> height += 16.0
+            }
+        }
+        return height
+    }
+
+    private fun addExtraSpacing(paragraphs: List<Paragraph>, extraSpace: Double): List<Paragraph> {
+        if (extraSpace <= 0) return paragraphs
+        // הוספת שורה ריקה בסוף כל פסקה כדי למתוח
+        return paragraphs.map { para ->
+            if (para.lines.isNotEmpty() && para.text.isNotEmpty()) {
+                para.copy(lines = para.lines + ParagraphLine("", isLastLine = true))
+            } else para
+        }
+    }
+}

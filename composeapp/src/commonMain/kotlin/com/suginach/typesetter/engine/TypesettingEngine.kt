@@ -33,6 +33,7 @@ class TypesettingEngine(
     private val pageFiller = PageFiller(textMeasurer, gematriaConverter)
     private val balancer = ColumnBalancer()
     private val widowGuard = WidowOrphanGuard()
+    private val verticalJustifier = VerticalJustifier()
     private val auditor = GeometryAuditor()
 
     /**
@@ -94,6 +95,9 @@ class TypesettingEngine(
                 if (settings.avoidWidowsOrphans) {
                     p = widowGuard.guard(p, settings)
                 }
+                // יישור אנכי — רק לעמודים מלאים (מעל 75%)
+                val bodyHeightPx = (settings.pageSizeHeight - settings.propMt - settings.propMb) * 3.7795
+                p = verticalJustifier.justify(p, settings, bodyHeightPx)
                 p
             }
 
@@ -219,18 +223,105 @@ class TypesettingEngine(
     private data class Part(val tokens: List<Token>)
 
     private fun createMainShaarPage(pageNum: Int, metadata: BookMetadata, settings: TypesetterSettings): RenderedPage {
+        // שער ראשי — כותרת הספר במרכז, מתחתיה תת-כותרת, מחבר, ופרטי מהדורא
+        val shaarParagraphs = mutableListOf<Paragraph>()
+
+        // רווח עליון
+        shaarParagraphs.add(Paragraph(
+            text = "",
+            lines = listOf(ParagraphLine("", isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+        ))
+
+        // כותרת ראשית — שם הספר
+        if (metadata.title.isNotEmpty()) {
+            shaarParagraphs.add(Paragraph(
+                text = metadata.title,
+                lines = listOf(ParagraphLine(metadata.title, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+                headingStyle = HeadingStyle(level = 0, fontSizePt = 28, isBold = true, spaceBeforePt = 40, spaceAfterPt = 20, alignment = TextAlignment.CENTER),
+            ))
+        }
+
+        // תת-כותרת — נושא
+        if (metadata.subtitle.isNotEmpty()) {
+            shaarParagraphs.add(Paragraph(
+                text = metadata.subtitle,
+                lines = listOf(ParagraphLine(metadata.subtitle, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+                headingStyle = HeadingStyle(level = 1, fontSizePt = 18, isBold = false, spaceBeforePt = 10, spaceAfterPt = 30, alignment = TextAlignment.CENTER),
+            ))
+        }
+
+        // רווח
+        shaarParagraphs.add(Paragraph(
+            text = "",
+            lines = listOf(ParagraphLine("", isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+        ))
+
+        // שם המחבר
+        if (metadata.author.isNotEmpty()) {
+            shaarParagraphs.add(Paragraph(
+                text = metadata.author,
+                lines = listOf(ParagraphLine(metadata.author, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+                headingStyle = HeadingStyle(level = 2, fontSizePt = 14, isBold = false, spaceBeforePt = 20, spaceAfterPt = 10, alignment = TextAlignment.CENTER),
+            ))
+        }
+
+        // מקום ושנת הוצאה
+        if (metadata.year.isNotEmpty()) {
+            shaarParagraphs.add(Paragraph(
+                text = metadata.year,
+                lines = listOf(ParagraphLine(metadata.year, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+                headingStyle = HeadingStyle(level = 3, fontSizePt = 12, isBold = false, spaceBeforePt = 5, spaceAfterPt = 40, alignment = TextAlignment.CENTER),
+            ))
+        }
+
+        val textArea = TextArea(blocks = listOf(TextBlock.SingleColumn(shaarParagraphs)))
+        val mainArea = MainArea(textArea = textArea)
+        val bodyArea = BodyArea(mainArea = mainArea)
+
         return RenderedPage(
             index = pageNum,
             pageNumber = gematriaConverter.toGematria(pageNum),
             role = PageRole.SHAAR_MAIN,
+            bodyArea = bodyArea,
         )
     }
 
     private fun createSubShaarPage(pageNum: Int, partTitle: String, metadata: BookMetadata, settings: TypesetterSettings): RenderedPage {
+        // שער משנה — כותרת החלק במרכז העמוד
+        val shaarParagraphs = mutableListOf<Paragraph>()
+
+        // רווח עליון גדול
+        for (i in 1..5) {
+            shaarParagraphs.add(Paragraph(
+                text = "",
+                lines = listOf(ParagraphLine("", isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+            ))
+        }
+
+        // כותרת החלק
+        shaarParagraphs.add(Paragraph(
+            text = partTitle,
+            lines = listOf(ParagraphLine(partTitle, isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+            headingStyle = HeadingStyle(level = 1, fontSizePt = 24, isBold = true, spaceBeforePt = 30, spaceAfterPt = 30, alignment = TextAlignment.CENTER),
+        ))
+
+        // רווח תחתון
+        for (i in 1..3) {
+            shaarParagraphs.add(Paragraph(
+                text = "",
+                lines = listOf(ParagraphLine("", isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+            ))
+        }
+
+        val textArea = TextArea(blocks = listOf(TextBlock.SingleColumn(shaarParagraphs)))
+        val mainArea = MainArea(textArea = textArea)
+        val bodyArea = BodyArea(mainArea = mainArea)
+
         return RenderedPage(
             index = pageNum,
             pageNumber = gematriaConverter.toGematria(pageNum),
             role = PageRole.SHAAR_SUB,
+            bodyArea = bodyArea,
         )
     }
 }
