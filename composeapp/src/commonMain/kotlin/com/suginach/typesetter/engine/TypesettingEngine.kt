@@ -10,9 +10,21 @@ import kotlinx.coroutines.flow.flow
 /**
  * המנוע הראשי — פונקציה טהורה (Pure) שמקבלת קלט והגדרות.
  *
- * חוק ברזל (מוקש 1 באפיון): המנוע מחזיר Flow<TypesetProgress> קר
- * במקום לקבל FlowCollector כפרמטר. השלב האחרון פולט את ה-TypesetResult
- * בתוך TypesetProgress.Done. ה-UI יכול להאזין ל-Flow ולבצע collect.
+ * חוקי ברזל לדטרמיניזם ושקיפות רפרנציאלית:
+ *
+ * מוקש 1: איסור HashSet/HashMap — כל האוספים הם List/LinkedHashMap/LinkedHashSet
+ *          כדי להבטיח סדר איטרציה קבוע מבוסס הכנסה בלבד.
+ *
+ * מוקש 2: Stateless — ה-engine לא מחזיק שום state פנימי או cache סטטי.
+ *          כל ריצה יוצרת את כל המבנים מחדש. typeset(input, settings) תמיד
+ *          תחזיר את אותה תוצאה עבור אותו קלט (שקיפות רפרנציאלית).
+ *
+ * מוקש 4: שוברי שוויון דטרמיניסטיים — כל פונקציות הדירוג משתמשות ב-compareBy
+ *          עם ערכים מתמטיים קבועים (length, index) ולא minByOrNull בלבד.
+ *
+ * מוקש 1 (Flow): המנוע מחזיר Flow<TypesetProgress> קר במקום לקבל
+ *          FlowCollector כפרמטר. השלב האחרון פולט את ה-TypesetResult
+ *          בתוך TypesetProgress.Done. ה-UI יכול להאזין ל-Flow ולבצע collect.
  */
 class TypesettingEngine(
     private val textMeasurer: TextMeasurer,
