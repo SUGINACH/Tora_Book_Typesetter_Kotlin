@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
@@ -20,12 +21,18 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.Font
 import com.suginach.typesetter.composeapp.generated.resources.Res
+import com.suginach.typesetter.composeapp.generated.resources.frankruehl_regular
+import com.suginach.typesetter.composeapp.generated.resources.frankruehl_medium
+import com.suginach.typesetter.composeapp.generated.resources.frankruehl_bold
 
 enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
 
 /**
  * גופן עברי ראשי — Frank-Ruehl הנטען דרך Compose Resources.
  * שלושה משקלים: Regular, Medium, Bold.
+ *
+ * ה-extension properties על Res.font (frankruehl_regular/medium/bold) נוצרות
+ * אוטומטית ע"י Compose Resources plugin וחייבות import נפרד.
  */
 @Composable
 fun hebrewFont(): FontFamily {
@@ -48,20 +55,22 @@ fun App() {
     val engine = remember { TypesettingEngine(WasmJsTextMeasurer()) }
     val font = hebrewFont()
 
-    MaterialTheme(typography = MaterialTheme.typography.let { it.copy(
-        bodyLarge = it.bodyLarge.copy(fontFamily = font),
-        bodyMedium = it.bodyMedium.copy(fontFamily = font),
-        bodySmall = it.bodySmall.copy(fontFamily = font),
-        titleLarge = it.titleLarge.copy(fontFamily = font),
-        titleMedium = it.titleMedium.copy(fontFamily = font),
-        titleSmall = it.titleSmall.copy(fontFamily = font),
-        labelLarge = it.labelLarge.copy(fontFamily = font),
-        labelMedium = it.labelMedium.copy(fontFamily = font),
-        labelSmall = it.labelSmall.copy(fontFamily = font),
-        headlineLarge = it.headlineLarge.copy(fontFamily = font),
-        headlineMedium = it.headlineMedium.copy(fontFamily = font),
-        headlineSmall = it.headlineSmall.copy(fontFamily = font),
-    )}) {
+    // אילוץ כיוון ימני (RTL) עבור כל ה-UI — חיוני לעברית
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        MaterialTheme(typography = MaterialTheme.typography.let { it.copy(
+            bodyLarge = it.bodyLarge.copy(fontFamily = font, textAlign = TextAlign.Right),
+            bodyMedium = it.bodyMedium.copy(fontFamily = font, textAlign = TextAlign.Right),
+            bodySmall = it.bodySmall.copy(fontFamily = font, textAlign = TextAlign.Right),
+            titleLarge = it.titleLarge.copy(fontFamily = font, textAlign = TextAlign.Right),
+            titleMedium = it.titleMedium.copy(fontFamily = font, textAlign = TextAlign.Right),
+            titleSmall = it.titleSmall.copy(fontFamily = font, textAlign = TextAlign.Right),
+            labelLarge = it.labelLarge.copy(fontFamily = font, textAlign = TextAlign.Right),
+            labelMedium = it.labelMedium.copy(fontFamily = font, textAlign = TextAlign.Right),
+            labelSmall = it.labelSmall.copy(fontFamily = font, textAlign = TextAlign.Right),
+            headlineLarge = it.headlineLarge.copy(fontFamily = font, textAlign = TextAlign.Right),
+            headlineMedium = it.headlineMedium.copy(fontFamily = font, textAlign = TextAlign.Right),
+            headlineSmall = it.headlineSmall.copy(fontFamily = font, textAlign = TextAlign.Right),
+        )}) {
         Column(modifier = Modifier.fillMaxSize()) {
             // סרגל כרטיסיות
             Row(
@@ -111,6 +120,7 @@ fun App() {
                 Tab.AUDIT -> AuditTab(typesetResult)
                 Tab.PREVIEW -> PreviewTab(typesetResult, settings)
             }
+        }
         }
     }
 }
