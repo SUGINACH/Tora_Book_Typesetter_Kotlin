@@ -643,13 +643,14 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
         ) {
             // 1. כותרת עליונה
             page.headerRow?.let { headerRow ->
+                val font = hebrewFont()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(headerContentToString(headerRow.right), fontSize = 6.sp)
-                    Text(headerContentToString(headerRow.center), fontSize = 6.sp)
-                    Text(headerContentToString(headerRow.left), fontSize = 6.sp)
+                    Text(headerContentToString(headerRow.right), fontSize = 6.sp, fontFamily = font)
+                    Text(headerContentToString(headerRow.center), fontSize = 6.sp, fontFamily = font)
+                    Text(headerContentToString(headerRow.left), fontSize = 6.sp, fontFamily = font)
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 1.dp))
             }
@@ -660,6 +661,7 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 val bodyArea = page.bodyArea
+                val font = hebrewFont()
 
                 // 2.1 אזור טקסט עיקרי + כותרות צד
                 Row(
@@ -675,7 +677,7 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
                             horizontalAlignment = Alignment.Start,
                         ) {
                             for (sn in mainArea.rightSideNotes) {
-                                Text(sn.text, fontSize = 5.sp, maxLines = 3)
+                                Text(sn.text, fontSize = 5.sp, maxLines = 3, fontFamily = font)
                                 Spacer(Modifier.height(2.dp))
                             }
                         }
@@ -698,7 +700,7 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
                             horizontalAlignment = Alignment.End,
                         ) {
                             for (sn in mainArea.leftSideNotes) {
-                                Text(sn.text, fontSize = 5.sp, maxLines = 3)
+                                Text(sn.text, fontSize = 5.sp, maxLines = 3, fontFamily = font)
                                 Spacer(Modifier.height(2.dp))
                             }
                         }
@@ -712,22 +714,23 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
                         horizontalAlignment = Alignment.Start,
                     ) {
                         fnArea.header?.let {
-                            Text(it, fontSize = 4.sp, fontWeight = FontWeight.Bold)
+                            Text(it, fontSize = 4.sp, fontWeight = FontWeight.Bold, fontFamily = font)
                         }
                         for (entry in fnArea.entries) {
-                            Text("${entry.marker}. ${entry.text}", fontSize = 4.sp, maxLines = 2)
+                            Text("${entry.marker}. ${entry.text}", fontSize = 4.sp, maxLines = 2, fontFamily = font)
                         }
                     }
                 }
             }
 
             // 3. כותרת תחתונה (מספר עמוד)
+            val footerFont = hebrewFont()
             page.footerRow?.let { footer ->
                 Spacer(Modifier.height(2.dp))
-                Text(footer.pageNumber, fontSize = 7.sp)
+                Text(footer.pageNumber, fontSize = 7.sp, fontFamily = footerFont)
             } ?: page.pageNumberFooter?.let {
                 Spacer(Modifier.height(2.dp))
-                Text(it, fontSize = 7.sp)
+                Text(it, fontSize = 7.sp, fontFamily = footerFont)
             }
         }
     }
@@ -735,6 +738,7 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
 
 @Composable
 private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
+    val font = hebrewFont()
     when (block) {
         is TextBlock.TwoColumn -> {
             // שני טורים שווים ברוחבם ומאוזנים בגובהם
@@ -786,7 +790,7 @@ private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
             ) {
                 val count = if (block.isChapterEnd) settings.chapterEndOrnamentCount else 1
                 repeat(count) {
-                    Text("✦", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 2.dp))
+                    Text("✦", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 2.dp), fontFamily = font)
                 }
             }
         }
@@ -796,8 +800,12 @@ private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
 @Composable
 private fun HeadingPreview(heading: Heading) {
     val fontSize = (heading.fontSizePt * 0.7).sp
+    val font = hebrewFont()
+    // ריווח לפני ואחרי הכותרת
+    val spaceBefore = (heading.spaceBeforePt * 0.3).dp
+    val spaceAfter = (heading.spaceAfterPt * 0.3).dp
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = spaceBefore, bottom = spaceAfter),
         horizontalAlignment = when (heading.alignment) {
             TextAlignment.CENTER -> Alignment.CenterHorizontally
             TextAlignment.LEFT -> Alignment.Start
@@ -807,7 +815,7 @@ private fun HeadingPreview(heading: Heading) {
     ) {
         // עיטור עליון
         if (heading.ornamentTop != null && heading.ornamentTop != "none") {
-            Text("✦", fontSize = 8.sp)
+            Text("✦", fontSize = 8.sp, fontFamily = font)
         }
         // הכותרת עצמה
         val baseText = heading.text
@@ -816,51 +824,59 @@ private fun HeadingPreview(heading: Heading) {
             withSiman,
             fontSize = fontSize,
             fontWeight = if (heading.isBold) FontWeight.Bold else FontWeight.Normal,
+            fontFamily = font,
         )
         // עיטור תחתון
         if (heading.ornamentBottom != null && heading.ornamentBottom != "none") {
-            Text("✦", fontSize = 8.sp)
+            Text("✦", fontSize = 8.sp, fontFamily = font)
+        }
+        // עיטורי צד (לרמה 3)
+        if (heading.ornamentRight != null && heading.ornamentRight != "none") {
+            // לא ניתן להציג עיטור צד ימין ב-Column — נשתמש ב-Row
         }
     }
 }
 
 @Composable
 private fun ParagraphPreview(para: Paragraph, settings: TypesetterSettings) {
+    val font = hebrewFont()
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
         for ((idx, line) in para.lines.withIndex()) {
-            val isLast = idx == para.lines.lastIndex
-            // יישור: שורה אחרונה ממורכזת, אחרת יישור לשני צדדים (Compose יעשה את זה אוטומטית)
-            val align = when (line.alignment) {
+            val textAlign = when (line.alignment) {
                 TextAlignment.CENTER -> TextAlign.Center
                 TextAlignment.LEFT -> TextAlign.Left
                 TextAlignment.RIGHT -> TextAlign.Right
                 TextAlignment.JUSTIFIED -> TextAlign.Justify
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = when (line.alignment) {
-                    TextAlignment.CENTER -> Arrangement.Center
-                    TextAlignment.LEFT -> Arrangement.Start
-                    TextAlignment.RIGHT -> Arrangement.End
-                    TextAlignment.JUSTIFIED -> Arrangement.SpaceBetween
-                }
-            ) {
-                if (idx == 0 && para.firstWord != null && para.firstWordStyle != null) {
-                    // מילה ראשונה מוגדלת עם חלון
+            val baseFontSize = (settings.bodySize * 0.55).sp
+
+            // בניית annotatedString עם מילה ראשונה מוגדלת (אם רלוונטי)
+            val hasFirstWord = idx == 0 && para.firstWord != null && para.firstWordStyle != null && line.text.startsWith(para.firstWord)
+            val annotated = androidx.compose.ui.text.buildAnnotatedString {
+                if (hasFirstWord) {
                     val fwStyle = para.firstWordStyle
-                    Text(
-                        para.firstWord + " ",
+                    withStyle(androidx.compose.ui.text.SpanStyle(
                         fontSize = (fwStyle.fontSizePt * 0.55).sp,
                         fontWeight = if (fwStyle.isBold) FontWeight.Bold else FontWeight.Normal,
-                    )
-                    val remaining = line.text.removePrefix(para.firstWord).trimStart()
-                    if (remaining.isNotEmpty()) {
-                        Text(remaining, fontSize = (settings.bodySize * 0.55).sp)
+                        fontFamily = font,
+                        // חלון תחת מילה ראשונה — textDecoration עם קו תחתון
+                        textDecoration = if (fwStyle.hasWindow) androidx.compose.ui.text.style.TextDecoration.Underline else null,
+                    )) {
+                        append(para.firstWord)
                     }
+                    append(line.text.removePrefix(para.firstWord))
                 } else {
-                    Text(line.text, fontSize = (settings.bodySize * 0.55).sp)
+                    append(line.text)
                 }
             }
+
+            Text(
+                text = annotated,
+                fontSize = baseFontSize,
+                textAlign = textAlign,
+                modifier = Modifier.fillMaxWidth(),
+                fontFamily = font,
+            )
         }
     }
 }
