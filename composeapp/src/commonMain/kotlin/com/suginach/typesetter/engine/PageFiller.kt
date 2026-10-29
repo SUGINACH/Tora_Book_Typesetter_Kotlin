@@ -35,7 +35,8 @@ class PageFiller(
         val colWidthPx = calcColWidthPx(settings)
         val bodyHeightPx = calcBodyHeightPx(settings)
         val lineHeight = measurer.measureLineHeight(settings.bodyFont, settings.bodySize, settings.bodyLineHeight)
-        val maxLinesPerCol = (bodyHeightPx / lineHeight).toInt()
+        // מניעת לולאה אינסופית — מינימום 3 שורות לטור
+        val maxLinesPerCol = ((bodyHeightPx / lineHeight).toInt()).coerceAtLeast(3)
 
         // מצב נוכחי
         var currentBlocks = mutableListOf<TextBlock>()

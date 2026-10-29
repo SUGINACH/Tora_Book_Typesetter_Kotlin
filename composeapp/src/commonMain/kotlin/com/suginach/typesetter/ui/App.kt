@@ -279,6 +279,14 @@ private fun SettingsTab(settings: TypesetterSettings, onSettingsChange: (Typeset
             DoubleSettingRow("ריווח שורות", settings.bodyLineHeight, 1.0..2.0, 0.05) { v ->
                 onSettingsChange(settings.copy(bodyLineHeight = v))
             }
+            DropdownSettingRow("יישור שורות", settings.bodyAlignment,
+                listOf("right", "left", "center", "justified")) { v ->
+                onSettingsChange(settings.copy(bodyAlignment = v))
+            }
+            DropdownSettingRow("יישור שורה אחרונה", settings.bodyLastLineAlignment,
+                listOf("right", "left", "center")) { v ->
+                onSettingsChange(settings.copy(bodyLastLineAlignment = v))
+            }
             SettingRow("גופן") { Text(settings.bodyFont, fontSize = 10.sp) }
         }
 
@@ -414,6 +422,18 @@ private fun SettingsTab(settings: TypesetterSettings, onSettingsChange: (Typeset
             DropdownSettingRow("פורמט מספור", settings.pageNumFormat,
                 listOf("gematria", "page_gematria", "numeric")) { v ->
                 onSettingsChange(settings.copy(pageNumFormat = v))
+            }
+            DropdownSettingRow("מיקום מספר עמוד", settings.pageNumPosition,
+                listOf("bottom_center", "bottom_left", "bottom_right")) { v ->
+                onSettingsChange(settings.copy(pageNumPosition = v))
+            }
+            DropdownSettingRow("מסגרת מספר עמוד", settings.pageNumFrame,
+                listOf("none", "box", "circle")) { v ->
+                onSettingsChange(settings.copy(pageNumFrame = v))
+            }
+            DropdownSettingRow("מחלק טורים", settings.columnDivider,
+                listOf("none", "line", "dotted")) { v ->
+                onSettingsChange(settings.copy(columnDivider = v))
             }
         }
     }
