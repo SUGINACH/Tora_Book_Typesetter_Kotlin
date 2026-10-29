@@ -903,8 +903,10 @@ private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.Center,
             ) {
-                val count = if (block.isChapterEnd) settings.chapterEndOrnamentCount else 1
-                repeat(count) {
+                if (block.isChapterEnd) {
+                    // עיטור סוף פרק — שורה מלאה של כוכבים
+                    OrnamentLine(ornamentType = block.ornament)
+                } else {
                     Text("✦", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 2.dp), fontFamily = font)
                 }
             }
@@ -916,7 +918,6 @@ private fun BlockPreview(block: TextBlock, settings: TypesetterSettings) {
 private fun HeadingPreview(heading: Heading) {
     val fontSize = (heading.fontSizePt * 0.7).sp
     val font = hebrewFont()
-    // ריווח לפני ואחרי הכותרת
     val spaceBefore = (heading.spaceBeforePt * 0.3).dp
     val spaceAfter = (heading.spaceAfterPt * 0.3).dp
     Column(
@@ -928,28 +929,53 @@ private fun HeadingPreview(heading: Heading) {
             TextAlignment.JUSTIFIED -> Alignment.CenterHorizontally
         },
     ) {
-        // עיטור עליון
+        // עיטור עליון — שורת כוכבים
         if (heading.ornamentTop != null && heading.ornamentTop != "none") {
-            Text("✦", fontSize = 8.sp, fontFamily = font)
+            OrnamentLine(ornamentType = heading.ornamentTop)
         }
-        // הכותרת עצמה
+        // הכותרת עצמה עם עיטורי צד (לרמה 3)
         val baseText = heading.text
         val withSiman = heading.simanBadge?.let { "$it — $baseText" } ?: baseText
-        Text(
-            withSiman,
-            fontSize = fontSize,
-            fontWeight = if (heading.isBold) FontWeight.Bold else FontWeight.Normal,
-            fontFamily = font,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            if (heading.ornamentLeft != null && heading.ornamentLeft != "none") {
+                Text("❖", fontSize = 6.sp, fontFamily = font, modifier = Modifier.padding(horizontal = 2.dp))
+            }
+            Text(
+                withSiman,
+                fontSize = fontSize,
+                fontWeight = if (heading.isBold) FontWeight.Bold else FontWeight.Normal,
+                fontFamily = font,
+            )
+            if (heading.ornamentRight != null && heading.ornamentRight != "none") {
+                Text("❖", fontSize = 6.sp, fontFamily = font, modifier = Modifier.padding(horizontal = 2.dp))
+            }
+        }
         // עיטור תחתון
         if (heading.ornamentBottom != null && heading.ornamentBottom != "none") {
-            Text("✦", fontSize = 8.sp, fontFamily = font)
-        }
-        // עיטורי צד (לרמה 3)
-        if (heading.ornamentRight != null && heading.ornamentRight != "none") {
-            // לא ניתן להציג עיטור צד ימין ב-Column — נשתמש ב-Row
+            OrnamentLine(ornamentType = heading.ornamentBottom)
         }
     }
+}
+
+/**
+ * שורת עיטור — מציגה עיטור מותאם לפי הסוג.
+ */
+@Composable
+private fun OrnamentLine(ornamentType: String) {
+    val font = hebrewFont()
+    val ornament = when (ornamentType) {
+        "stars" -> "✦ ✦ ✦"
+        "diamond" -> "◆ ◆ ◆"
+        "dots" -> "• • •"
+        "line" -> "───────"
+        "double" -> "═══════"
+        "wave" -> "∼∼∼∼∼∼∼"
+        else -> "✦ ✦ ✦"
+    }
+    Text(ornament, fontSize = 7.sp, fontFamily = font, modifier = Modifier.padding(vertical = 1.dp))
 }
 
 @Composable
