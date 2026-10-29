@@ -921,7 +921,7 @@ private fun TocEntryPreview(entry: TocEntry) {
     val font = hebrewFont()
     val indent = (entry.level * 12).dp
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = indent, vertical = 1.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = indent, top = 1.dp, bottom = 1.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
