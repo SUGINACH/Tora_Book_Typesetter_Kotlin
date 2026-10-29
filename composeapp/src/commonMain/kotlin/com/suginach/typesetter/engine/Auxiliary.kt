@@ -5,19 +5,24 @@ import com.suginach.typesetter.settings.TypesetterSettings
 import kotlin.math.abs
 
 /**
- * מאזן טורים בעמוד — מעביר פסקאות/שורות בין הטור הימני לשמאלי כדי להשוות גובה.
+ * מאזן טורים בעמוד באמצעות גישת Candidate-Based (ללא לולאות feedback).
  *
- * אסטרטגיה:
- * 1. חישוב מספר השורות בכל טור
- * 2. אם הפער גדול מ-1 שורה, מעבירים פסקה שלמה מהטור הארוך לקצר
- * 3. אם אי אפשר להעביר פסקה שלמה, מעבירים שורות מהפסקה האחרונה
+ * חוק ברזל (מוקש 2 חלק 5): איסור על העברת שורות איטרטיבית בלולאה
+ * בין טורים, כדי למנוע לולאות oscillation. המנוע מייצר מראש מספר
+ * קבוע של מועמדי חיתוך וירטואליים, מחשב Penalty Score לכל אחד,
+ * ובוחר את המועמד עם הציון האופטימלי בצורה דטרמיניסטית.
+ *
+ * אלגוריתם:
+ * 1. איחוד כל השורות משני הטורים לרצף אחד
+ * 2. יצירת מועמדי חיתוך: חיתוך בכל מיקום אפשרי מ-N-3 עד N+3 (7 מועמדים)
+ * 3. חישוב Penalty = |rightLines - leftLines| לכל מועמד
+ * 4. בחירת המועמד עם Penalty מינימלי, עם tie-breaker דטרמיניסטי
  */
 class ColumnBalancer {
     fun balance(page: RenderedPage, settings: TypesetterSettings): RenderedPage {
         val blocks = page.bodyArea.mainArea.textArea.blocks
         if (blocks.isEmpty()) return page
 
-        // אוסף את כל ה-TwoColumn blocks ומאזן אותם
         val newBlocks = blocks.map { block ->
             when (block) {
                 is TextBlock.TwoColumn -> balanceTwoColumn(block)
@@ -31,63 +36,91 @@ class ColumnBalancer {
         return page.copy(bodyArea = newBodyArea)
     }
 
+    /**
+     * איזון טור אחד (TwoColumn) באמצעות Candidate-Based balance.
+     */
     private fun balanceTwoColumn(block: TextBlock.TwoColumn): TextBlock.TwoColumn {
         val rightLines = block.rightParagraphs.sumOf { it.lines.size }
         val leftLines = block.leftParagraphs.sumOf { it.lines.size }
 
+        // אין צורך באיזון אם הפער קטן
         if (abs(rightLines - leftLines) <= 1) return block
 
-        val (newRight, newLeft) = if (rightLines > leftLines) {
-            rebalance(block.rightParagraphs, block.leftParagraphs, targetRight = (rightLines + leftLines) / 2)
-        } else {
-            val (newL, newR) = rebalance(block.leftParagraphs, block.rightParagraphs, targetRight = (rightLines + leftLines) / 2)
-            newR to newL
-        }
+        // איחוד כל הפסקאות לרצף אחד — ראשית ימין, אחר כך שמאל
+        val allParagraphs = block.rightParagraphs + block.leftParagraphs
+        val totalLines = allParagraphs.sumOf { it.lines.size }
+        if (totalLines == 0) return block
+
+        // נקודת החיתוך האידיאלית = חצי מהשורות
+        val idealSplit = totalLines / 2
+
+        // יצירת 7 מועמדי חיתוך סביב הנקודה האידיאלית
+        val candidates = (idealSplit - 3..idealSplit + 3).filter { it > 0 && it < totalLines }
+
+        // חישוב Penalty לכל מועמד ובחירת המינימלי
+        // Tie-breaker: מועמד עם splitPoint נמוך יותר (יותר שורות בימין)
+        val bestCandidate = candidates.minByOrNull { splitPoint ->
+            val rightLinesAtSplit = splitPoint
+            val leftLinesAtSplit = totalLines - splitPoint
+            abs(rightLinesAtSplit - leftLinesAtSplit)
+        } ?: idealSplit
+
+        // חלוקת הפסקאות לפי נקודת החיתוך הנבחרת
+        val (newRight, newLeft) = splitParagraphsAtLine(allParagraphs, bestCandidate)
 
         return block.copy(rightParagraphs = newRight, leftParagraphs = newLeft, isBalanced = true)
     }
 
     /**
-     * מעביר פסקאות מ-[from] ל-[to] עד ש-[from] מגיע ל-[targetRight] שורות.
+     * חלוקת רשימת פסקאות לשני טורים כך שהטור הימני יכיל בדיוק targetRightLines שורות.
+     * אם פסקה חוצה את נקודת החיתוך, היא מתפצלת לשני חלקים.
      */
-    private fun rebalance(
-        from: List<Paragraph>,
-        to: List<Paragraph>,
-        targetRight: Int,
+    private fun splitParagraphsAtLine(
+        paragraphs: List<Paragraph>,
+        targetRightLines: Int,
     ): Pair<List<Paragraph>, List<Paragraph>> {
-        var currentFrom = from.toMutableList()
-        var currentTo = to.toMutableList()
-        var fromLines = currentFrom.sumOf { it.lines.size }
+        val rightParas = mutableListOf<Paragraph>()
+        val leftParas = mutableListOf<Paragraph>()
+        var linesUsed = 0
 
-        // נסה להעביר פסקאות שלמות מהסוף
-        while (fromLines > targetRight + 1 && currentFrom.size > 1) {
-            val last = currentFrom.removeLast()
-            currentTo.add(0, last)
-            fromLines -= last.lines.size
+        for (para in paragraphs) {
+            val paraLines = para.lines.size
+            if (linesUsed + paraLines <= targetRightLines) {
+                // כל הפסקה נכנסת בימין
+                rightParas.add(para)
+                linesUsed += paraLines
+            } else if (linesUsed >= targetRightLines) {
+                // כל הפסקה עוברת לשמאל
+                leftParas.add(if (leftParas.isEmpty()) {
+                    // הפסקה הראשונה בשמאל — מסמן כהמשך אם יש firstWord
+                    if (para.isFirstWordEnlarged) {
+                        para.copy(isFirstWordEnlarged = false, firstWord = null, firstWordStyle = null, isContinuation = true)
+                    } else para
+                } else para)
+            } else {
+                // הפסקה חוצה את נקודת החיתוך — פיצול
+                val linesToKeep = targetRightLines - linesUsed
+                if (linesToKeep > 0) {
+                    rightParas.add(para.copy(
+                        lines = para.lines.subList(0, linesToKeep),
+                        isEnd = false,
+                    ))
+                }
+                val linesToMove = paraLines - linesToKeep
+                if (linesToMove > 0) {
+                    leftParas.add(para.copy(
+                        lines = para.lines.subList(linesToKeep, paraLines),
+                        isFirstWordEnlarged = false,
+                        firstWord = null,
+                        firstWordStyle = null,
+                        isContinuation = true,
+                    ))
+                }
+                linesUsed = targetRightLines
+            }
         }
 
-        // אם עדיין יש פער גדול, נסה לפצל את הפסקה האחרונה
-        if (fromLines > targetRight + 2 && currentFrom.isNotEmpty()) {
-            val last = currentFrom.removeLast()
-            val splitPoint = (last.lines.size / 2).coerceAtLeast(1)
-            val keepLines = last.lines.subList(0, splitPoint)
-            val moveLines = last.lines.subList(splitPoint, last.lines.size)
-
-            if (keepLines.isNotEmpty()) {
-                currentFrom.add(last.copy(lines = keepLines, isEnd = false))
-            }
-            if (moveLines.isNotEmpty()) {
-                currentTo.add(0, last.copy(
-                    lines = moveLines,
-                    isFirstWordEnlarged = false,
-                    firstWord = null,
-                    firstWordStyle = null,
-                    isContinuation = true,
-                ))
-            }
-        }
-
-        return currentFrom.toList() to currentTo.toList()
+        return rightParas.toList() to leftParas.toList()
     }
 }
 

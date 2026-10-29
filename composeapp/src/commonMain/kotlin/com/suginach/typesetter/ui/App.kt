@@ -16,21 +16,14 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import com.suginach.typesetter.model.*
-import com.suginach.typesetter.engine.TypesettingEngine
-import com.suginach.typesetter.engine.TypesetProgress
-import com.suginach.typesetter.platform.WasmJsTextMeasurer
 import com.suginach.typesetter.settings.TypesetterSettings
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
 import org.jetbrains.compose.resources.Font
 import com.suginach.typesetter.composeapp.generated.resources.Res
 import com.suginach.typesetter.composeapp.generated.resources.frankruehl_regular
 import com.suginach.typesetter.composeapp.generated.resources.frankruehl_medium
 import com.suginach.typesetter.composeapp.generated.resources.frankruehl_bold
-
-enum class Tab { EDITOR, SETTINGS, AUDIT, PREVIEW }
+import com.suginach.typesetter.viewmodel.TypesetterViewModel
+import com.suginach.typesetter.viewmodel.Tab
 
 /**
  * גופן עברי ראשי — Frank-Ruehl הנטען דרך Compose Resources.
@@ -50,24 +43,25 @@ fun hebrewFont(): FontFamily {
 
 @Composable
 fun App() {
-    var currentTab by remember { mutableStateOf(Tab.EDITOR) }
-    var rawText by remember { mutableStateOf("") }
-    var settings by remember { mutableStateOf(TypesetterSettings.default()) }
-    var typesetResult by remember { mutableStateOf<TypesetResult?>(null) }
-    var isTypesetting by remember { mutableStateOf(false) }
-    var progressText by remember { mutableStateOf("") }
-    var fontsLoaded by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val engine = remember { TypesettingEngine(WasmJsTextMeasurer()) }
+    // חוק ברזל (מוקש 1 חלק 4): שימוש ב-ViewModel במקום rememberCoroutineScope
+    // כדי למנוע ביטול ריצה במעבר כרטיסיות
+    val viewModel = remember { TypesetterViewModel() }
+
+    // קריאת state מה-ViewModel
+    val currentTab by viewModel.currentTab
+    val rawText by viewModel.rawText
+    val settings by viewModel.settings
+    val typesetResult by viewModel.typesetResult
+    val isTypesetting by viewModel.isTypesetting
+    val progressText by viewModel.progressText
+    val fontsLoaded by viewModel.fontsLoaded
+
     val font = hebrewFont()
 
     // חוק 3: המתנה לטעינת פונט לפני איפשור עימוד
-    // ה-Font() composable טוען פונטים אסינכרונית. אם המנוע ירוץ לפני שהפונט נטען,
-    // המדידות יהיו שגויות. כאן אנחנו מסמנים שהפונט זמין לאחר פריים אחד.
     LaunchedEffect(font) {
-        // המתנה קצרה לוודא שהפונט נטען ב-Compose
         kotlinx.coroutines.delay(100)
-        fontsLoaded = true
+        viewModel.markFontsLoaded()
     }
 
     // אילוץ כיוון ימני (RTL) עבור כל ה-UI — חיוני לעברית
@@ -92,48 +86,13 @@ fun App() {
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                TabButton("✍️ עורך", Tab.EDITOR, currentTab) { currentTab = it }
-                TabButton("⚙️ הגדרות", Tab.SETTINGS, currentTab) { currentTab = it }
-                TabButton("🔍 בדיקה", Tab.AUDIT, currentTab) { currentTab = it }
-                TabButton("📖 תצוגה", Tab.PREVIEW, currentTab) { currentTab = it }
+                TabButton("✍️ עורך", Tab.EDITOR, currentTab) { viewModel.updateTab(it) }
+                TabButton("⚙️ הגדרות", Tab.SETTINGS, currentTab) { viewModel.updateTab(it) }
+                TabButton("🔍 בדיקה", Tab.AUDIT, currentTab) { viewModel.updateTab(it) }
+                TabButton("📖 תצוגה", Tab.PREVIEW, currentTab) { viewModel.updateTab(it) }
                 Spacer(Modifier.weight(1f))
                 Button(
-                    onClick = {
-                        if (rawText.isNotBlank() && !isTypesetting) {
-                            isTypesetting = true
-                            progressText = "מתחיל..."
-                            // חוק 4: העימוד רץ ברקע על Dispatchers.Default
-                            // כדי למנוע קפיאת UI ב-Windows וב-Web
-                            scope.launch {
-                                val input = TypesetInput(rawText = rawText)
-                                // צלם את ההגדרות לפני העימוד כדי למנוע מרוץ (חוק 7)
-                                val settingsSnapshot = settings
-                                // מוקש 1: המנוע מחזיר Flow<TypesetProgress> קר
-                                // אנחנו עושים collect על Dispatchers.Default
-                                val result = withContext(Dispatchers.Default) {
-                                    var finalResult: TypesetResult? = null
-                                    engine.typeset(input, settingsSnapshot).collect { progress ->
-                                        progressText = when (progress) {
-                                            is TypesetProgress.Parsing -> "מנתח טקסט... ${progress.linesProcessed}/${progress.totalLines}"
-                                            is TypesetProgress.PageFilling -> "מעמד עמוד ${progress.currentPage}/${progress.totalPages}"
-                                            is TypesetProgress.Balancing -> "מאזן עמוד ${progress.pageIndex}"
-                                            is TypesetProgress.Auditing -> "בודק איכות... נמצאו ${progress.issuesFound} בעיות"
-                                            is TypesetProgress.Done -> {
-                                                finalResult = progress.result
-                                                "הושלם!"
-                                            }
-                                        }
-                                    }
-                                    finalResult!!
-                                }
-                                // חזרה ל-Main thread לעדכון ה-UI
-                                typesetResult = result
-                                isTypesetting = false
-                                progressText = ""
-                                currentTab = Tab.PREVIEW
-                            }
-                        }
-                    },
+                    onClick = { viewModel.startTypesetting() },
                     enabled = rawText.isNotBlank() && !isTypesetting && fontsLoaded
                 ) {
                     Text(if (isTypesetting) "⏳ $progressText" else "⚡ עמד")
@@ -144,8 +103,8 @@ fun App() {
 
             // תוכן הכרטיסייה
             when (currentTab) {
-                Tab.EDITOR -> EditorTab(rawText) { rawText = it }
-                Tab.SETTINGS -> SettingsTab(settings) { settings = it }
+                Tab.EDITOR -> EditorTab(rawText) { viewModel.updateRawText(it) }
+                Tab.SETTINGS -> SettingsTab(settings) { viewModel.updateSettings(it) }
                 Tab.AUDIT -> AuditTab(typesetResult)
                 Tab.PREVIEW -> PreviewTab(typesetResult, settings)
             }
