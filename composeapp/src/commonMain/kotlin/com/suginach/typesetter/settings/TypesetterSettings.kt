@@ -2,6 +2,67 @@ package com.suginach.typesetter.settings
 
 import kotlinx.serialization.Serializable
 
+/**
+ * ערכת נושא — הגדרות עיצוב כלליות לספר.
+ */
+@Serializable
+data class BookTheme(
+    val id: String,
+    val name: String,
+    val shaarMainBg: String = "#FFF8E1",
+    val shaarSubBg: String = "#F5F5DC",
+    val regularPageBg: String = "#FFFFFF",
+    val headingColor: String = "#1A1A1A",
+    val bodyColor: String = "#000000",
+    val ornamentColor: String = "#8B4513",
+    val borderColor: String = "#D4AF37",
+) {
+    companion object {
+        /** ערכת נושא 1: דמסק ושיש מרכזי */
+        val BUILTIN_1 = BookTheme(
+            id = "builtin_1",
+            name = "1. דמסק ושיש מרכזי",
+            shaarMainBg = "#FFF8E1",
+            shaarSubBg = "#F5F5DC",
+            regularPageBg = "#FFFFFF",
+            headingColor = "#1A1A1A",
+            bodyColor = "#000000",
+            ornamentColor = "#8B4513",
+            borderColor = "#D4AF37",
+        )
+
+        /** ערכת נושא 2: תחרת סלסולים כפולה */
+        val BUILTIN_2 = BookTheme(
+            id = "builtin_2",
+            name = "2. תחרת סלסולים כפולה",
+            shaarMainBg = "#F0F4F8",
+            shaarSubBg = "#E6E6FA",
+            regularPageBg = "#FFFFFF",
+            headingColor = "#2C3E50",
+            bodyColor = "#1A1A1A",
+            ornamentColor = "#4A4A4A",
+            borderColor = "#7B8A8B",
+        )
+
+        /** ערכת נושא 3: קרנות וילנא וגיליושה */
+        val BUILTIN_3 = BookTheme(
+            id = "builtin_3",
+            name = "3. קרנות וילנא וגיליושה",
+            shaarMainBg = "#FAF0E6",
+            shaarSubBg = "#F5DEB3",
+            regularPageBg = "#FFFEF7",
+            headingColor = "#3B2F2F",
+            bodyColor = "#1A1A1A",
+            ornamentColor = "#6B4423",
+            borderColor = "#B8860B",
+        )
+
+        val ALL = listOf(BUILTIN_1, BUILTIN_2, BUILTIN_3)
+
+        fun byId(id: String): BookTheme = ALL.firstOrNull { it.id == id } ?: BUILTIN_1
+    }
+}
+
 @Serializable
 data class TypesetterSettings(
     // ערכות נושא ושערים

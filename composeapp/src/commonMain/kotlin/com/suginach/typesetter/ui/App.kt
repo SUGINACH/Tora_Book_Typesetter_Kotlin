@@ -242,6 +242,23 @@ private fun SettingsTab(settings: TypesetterSettings, onSettingsChange: (Typeset
             }
         }
 
+        // ערכות נושא ושערים
+        SettingsSection("ערכות נושא ושערים") {
+            DropdownSettingRow("ערכת נושא", settings.activeTheme,
+                com.suginach.typesetter.settings.BookTheme.ALL.map { it.id }) { v ->
+                onSettingsChange(settings.copy(activeTheme = v))
+            }
+            BooleanSettingRow("שער ראשי", settings.showMainShaar) { v ->
+                onSettingsChange(settings.copy(showMainShaar = v))
+            }
+            BooleanSettingRow("שער משנה", settings.showSubShaar) { v ->
+                onSettingsChange(settings.copy(showSubShaar = v))
+            }
+            BooleanSettingRow("שער אחורי", settings.showBackShaar) { v ->
+                onSettingsChange(settings.copy(showBackShaar = v))
+            }
+        }
+
         // גוף הטקסט — ניתן לעריכה
         SettingsSection("גוף הטקסט") {
             IntSettingRow("גודל (pt)", settings.bodySize, 8..24) { v ->
@@ -657,12 +674,13 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
     val pageWidth = (settings.pageSizeWidth * 1.6).dp
     val pageHeight = (settings.pageSizeHeight * 1.6).dp
 
-    // צבע רקע מיוחד לשערים
+    // צבע רקע מיוחד לשערים — לפי ערכת הנושא הפעילה
+    val theme = com.suginach.typesetter.settings.BookTheme.byId(settings.activeTheme)
     val backgroundColor = when (page.role) {
-        PageRole.SHAAR_MAIN, PageRole.SHAAR_BACK -> androidx.compose.ui.graphics.Color(0xFFFFF8E1)
-        PageRole.SHAAR_SUB -> androidx.compose.ui.graphics.Color(0xFFF5F5DC)
+        PageRole.SHAAR_MAIN, PageRole.SHAAR_BACK -> parseColor(theme.shaarMainBg)
+        PageRole.SHAAR_SUB -> parseColor(theme.shaarSubBg)
         PageRole.TOC_GENERAL, PageRole.TOC_DETAILED -> androidx.compose.ui.graphics.Color(0xFFF0F4F8)
-        else -> androidx.compose.ui.graphics.Color.White
+        else -> parseColor(theme.regularPageBg)
     }
 
     Card(
@@ -944,6 +962,21 @@ private fun headerContentToString(content: HeaderContent): String = when (conten
     is HeaderContent.Text -> content.text
     is HeaderContent.Ornament -> "✦"
     HeaderContent.Empty -> ""
+}
+
+/**
+ * המרת מחרוזת HEX ל-Color של Compose.
+ */
+private fun parseColor(hex: String): androidx.compose.ui.graphics.Color {
+    val cleaned = hex.removePrefix("#")
+    return try {
+        val r = cleaned.substring(0, 2).toInt(16)
+        val g = cleaned.substring(2, 4).toInt(16)
+        val b = cleaned.substring(4, 6).toInt(16)
+        androidx.compose.ui.graphics.Color(r, g, b)
+    } catch (e: Exception) {
+        androidx.compose.ui.graphics.Color.White
+    }
 }
 
 /**
