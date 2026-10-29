@@ -324,6 +324,29 @@ private fun SettingsTab(settings: TypesetterSettings, onSettingsChange: (Typeset
             }
         }
 
+        // עיטורי כותרות
+        SettingsSection("עיטורי כותרות") {
+            val ornamentOptions = listOf("none", "stars", "diamond", "dots", "line", "double", "wave")
+            DropdownSettingRow("H2 עיטור עליון", settings.h2OrnamentTop, ornamentOptions) { v ->
+                onSettingsChange(settings.copy(h2OrnamentTop = v))
+            }
+            DropdownSettingRow("H2 עיטור תחתון", settings.h2OrnamentBottom, ornamentOptions) { v ->
+                onSettingsChange(settings.copy(h2OrnamentBottom = v))
+            }
+            DropdownSettingRow("H3 עיטור ימין", settings.h3OrnamentRight, ornamentOptions) { v ->
+                onSettingsChange(settings.copy(h3OrnamentRight = v))
+            }
+            DropdownSettingRow("H3 עיטור שמאל", settings.h3OrnamentLeft, ornamentOptions) { v ->
+                onSettingsChange(settings.copy(h3OrnamentLeft = v))
+            }
+            DropdownSettingRow("עיטור סוף פרק", settings.chapterEndOrnament, ornamentOptions) { v ->
+                onSettingsChange(settings.copy(chapterEndOrnament = v))
+            }
+            BooleanSettingRow("סימן אוטומטי ל-H2", settings.h2AutoSiman) { v ->
+                onSettingsChange(settings.copy(h2AutoSiman = v))
+            }
+        }
+
         // גריד
         SettingsSection("גריד וטיפוגרפיה") {
             DropdownSettingRow("גודל עמוד", "${settings.pageSizeWidth.toInt()}×${settings.pageSizeHeight.toInt()}mm",
