@@ -645,12 +645,13 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
     }
     val scrollState = rememberScrollState()
     val pdfExporter = remember { com.suginach.typesetter.platform.PdfExporter() }
+    var zoom by remember { mutableStateOf(1.0f) }
+    var currentPage by remember { mutableStateOf(0) }
+
     Column(
-        modifier = Modifier.fillMaxSize().padding(8.dp).verticalScroll(scrollState),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxSize().padding(8.dp),
     ) {
-        // סרגל מידע + כפתור ייצוא
+        // סרגל כלים עליון
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.Center,
@@ -670,53 +671,85 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
                 Text("✓ אין בעיות", fontSize = 11.sp, color = androidx.compose.ui.graphics.Color(0xFF2E7D32))
             }
             Spacer(Modifier.width(16.dp))
+
+            // כפתורי זום
+            OutlinedButton(onClick = { zoom = (zoom - 0.2f).coerceAtLeast(0.3f) }) {
+                Text("−", fontSize = 14.sp)
+            }
+            Text("${(zoom * 100).toInt()}%", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 4.dp))
+            OutlinedButton(onClick = { zoom = (zoom + 0.2f).coerceAtMost(3.0f) }) {
+                Text("+", fontSize = 14.sp)
+            }
+            Spacer(Modifier.width(8.dp))
+
+            // ניווט עמודים
             OutlinedButton(
-                onClick = { pdfExporter.exportToPdf() },
+                onClick = { currentPage = (currentPage - 1).coerceAtLeast(0) },
+                enabled = currentPage > 0,
             ) {
-                Text("🖨️ ייצוא PDF", fontSize = 10.sp)
+                Text("◀", fontSize = 10.sp)
+            }
+            Text("${currentPage + 1}/${result.pages.size}", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 4.dp))
+            OutlinedButton(
+                onClick = { currentPage = (currentPage + 1).coerceAtMost(result.pages.size - 1) },
+                enabled = currentPage < result.pages.size - 1,
+            ) {
+                Text("▶", fontSize = 10.sp)
+            }
+            Spacer(Modifier.width(8.dp))
+            OutlinedButton(onClick = { pdfExporter.exportToPdf() }) {
+                Text("🖨️ PDF", fontSize = 10.sp)
             }
         }
-        for ((idx, page) in result.pages.withIndex()) {
-            // מספר עמוד לוגי מעל כל עמוד
-            Text("עמוד ${idx + 1}", fontSize = 9.sp, color = androidx.compose.ui.graphics.Color.Gray)
-            PagePreview(page, settings)
-        }
 
-        // תוכן עניינים
-        result.tableOfContents?.let { toc ->
-            Spacer(Modifier.height(16.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
-                ),
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("📋 תוכן עניינים", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    TocEntryPreview(toc)
+        // אזור התצוגה עם גלילה
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // תוכן עניינים
+            result.tableOfContents?.let { toc ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("📋 תוכן עניינים", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        TocEntryPreview(toc)
+                    }
                 }
             }
-        }
 
-        // הערות סיום
-        val totalEndnotes = result.endnotes.values.sumOf { it.size }
-        if (totalEndnotes > 0) {
-            Spacer(Modifier.height(16.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
-                ),
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("📋 הערות סיום ($totalEndnotes)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    for ((partIdx, entries) in result.endnotes) {
-                        if (entries.isEmpty()) continue
-                        Text("— חלק ${partIdx + 1} —", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-                        for (entry in entries) {
-                            Text("${entry.marker}. ${entry.text}", fontSize = 10.sp, modifier = Modifier.padding(vertical = 1.dp))
+            // תצוגת עמוד נוכחי עם זום
+            val page = result.pages.getOrNull(currentPage)
+            if (page != null) {
+                Text("עמוד ${currentPage + 1}", fontSize = 9.sp, color = androidx.compose.ui.graphics.Color.Gray)
+                PagePreview(page, settings, zoom)
+            }
+
+            // הערות סיום
+            val totalEndnotes = result.endnotes.values.sumOf { it.size }
+            if (totalEndnotes > 0) {
+                Spacer(Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("📋 הערות סיום ($totalEndnotes)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        for ((partIdx, entries) in result.endnotes) {
+                            if (entries.isEmpty()) continue
+                            Text("— חלק ${partIdx.toIntOrNull()?.plus(1) ?: partIdx} —", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                            for (entry in entries) {
+                                Text("${entry.marker}. ${entry.text}", fontSize = 10.sp, modifier = Modifier.padding(vertical = 1.dp))
+                            }
                         }
                     }
                 }
@@ -726,10 +759,10 @@ private fun PreviewTab(result: TypesetResult?, settings: TypesetterSettings) {
 }
 
 @Composable
-private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
-    // מוקטן פי 3 מגודל A4 אמיתי (210x297mm)
-    val pageWidth = (settings.pageSizeWidth * 1.6).dp
-    val pageHeight = (settings.pageSizeHeight * 1.6).dp
+private fun PagePreview(page: RenderedPage, settings: TypesetterSettings, zoom: Float = 1.0f) {
+    // מוקטן פי 3 מגודל A4 אמיתי (210x297mm) × זום
+    val pageWidth = (settings.pageSizeWidth * 1.6 * zoom).dp
+    val pageHeight = (settings.pageSizeHeight * 1.6 * zoom).dp
 
     // צבע רקע מיוחד לשערים — לפי ערכת הנושא הפעילה
     val theme = com.suginach.typesetter.settings.BookTheme.byId(settings.activeTheme)
