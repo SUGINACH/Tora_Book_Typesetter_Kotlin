@@ -133,6 +133,8 @@ data class Paragraph(
     val footnoteMarkers: List<FootnoteMarker> = emptyList(),
     val alignment: TextAlignment = TextAlignment.JUSTIFIED,
     val lastLineAlignment: TextAlignment = TextAlignment.CENTER,
+    /** עיצוב כותרת אם הפסקה היא כותרת 4/5/6 */
+    val headingStyle: HeadingStyle? = null,
 ) {
     /** תאימות לאחור — מאפשר שימוש ב-lines כ-List<String> */
     constructor(
@@ -207,6 +209,18 @@ data class Heading(
     val ornamentLeft: String? = null,
     val alignment: TextAlignment = TextAlignment.CENTER,
     val customStyleId: String? = null,
+)
+
+/**
+ * עיצוב כותרת אינליין (לרמות 4/5/6) — מוטמע בתוך Paragraph.
+ */
+data class HeadingStyle(
+    val level: Int,
+    val fontSizePt: Int,
+    val isBold: Boolean,
+    val spaceBeforePt: Int = 0,
+    val spaceAfterPt: Int = 0,
+    val alignment: TextAlignment = TextAlignment.RIGHT,
 )
 
 /**

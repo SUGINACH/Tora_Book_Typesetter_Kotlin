@@ -843,6 +843,30 @@ private fun HeadingPreview(heading: Heading) {
 @Composable
 private fun ParagraphPreview(para: Paragraph, settings: TypesetterSettings) {
     val font = hebrewFont()
+    // אם זו כותרת 4/5/6 — משתמשים בעיצוב מיוחד
+    val hs = para.headingStyle
+    if (hs != null) {
+        val fontSize = (hs.fontSizePt * 0.55).sp
+        val textAlign = when (hs.alignment) {
+            TextAlignment.CENTER -> TextAlign.Center
+            TextAlignment.LEFT -> TextAlign.Left
+            TextAlignment.RIGHT -> TextAlign.Right
+            TextAlignment.JUSTIFIED -> TextAlign.Justify
+        }
+        Text(
+            text = para.text,
+            fontSize = fontSize,
+            fontWeight = if (hs.isBold) FontWeight.Bold else FontWeight.Normal,
+            fontFamily = font,
+            textAlign = textAlign,
+            modifier = Modifier.fillMaxWidth().padding(
+                top = (hs.spaceBeforePt * 0.3).dp,
+                bottom = (hs.spaceAfterPt * 0.3).dp,
+            ),
+        )
+        return
+    }
+
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
         for ((idx, line) in para.lines.withIndex()) {
             val textAlign = when (line.alignment) {

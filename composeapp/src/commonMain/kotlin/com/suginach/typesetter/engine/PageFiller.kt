@@ -122,13 +122,26 @@ class PageFiller(
                             currentBlocks.add(TextBlock.HeadingSpan(heading))
                         }
 
-                        // כותרות 4/5/6 — inline בתוך הטור
+                        // כותרות 4/5/6 — inline בתוך הטור עם עיצוב מלא
                         else -> {
-                            val heading = createHeading(token, settings)
+                            val headingStyle = HeadingStyle(
+                                level = level,
+                                fontSizePt = settings.headingSizes[level] ?: 12,
+                                isBold = settings.headingBold[level] ?: true,
+                                spaceBeforePt = settings.headingSpaceBefore[level] ?: 4,
+                                spaceAfterPt = settings.headingSpaceAfter[level] ?: 4,
+                                alignment = parseAlignment(settings.headingAlignment[level] ?: "right"),
+                            )
                             val headingPara = Paragraph(
                                 text = token.text,
-                                lines = listOf(ParagraphLine(token.text, isFirstLine = true, isLastLine = true, alignment = TextAlignment.RIGHT)),
+                                lines = listOf(ParagraphLine(
+                                    text = token.text,
+                                    isFirstLine = true,
+                                    isLastLine = true,
+                                    alignment = headingStyle.alignment,
+                                )),
                                 customStyleId = "heading_$level",
+                                headingStyle = headingStyle,
                             )
 
                             // מיקום הכותרת בטור המתאים
