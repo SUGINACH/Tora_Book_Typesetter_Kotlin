@@ -447,7 +447,6 @@ class PageFiller(
             headerRow = headerRow,
             bodyArea = bodyArea,
             footerRow = footerRow,
-            pageNumberFooter = displayPageNum,
         )
     }
 

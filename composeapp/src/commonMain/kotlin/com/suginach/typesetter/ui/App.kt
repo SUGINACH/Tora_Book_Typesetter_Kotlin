@@ -716,9 +716,6 @@ private fun PagePreview(page: RenderedPage, settings: TypesetterSettings) {
             page.footerRow?.let { footer ->
                 Spacer(Modifier.height(2.dp))
                 Text(footer.pageNumber, fontSize = 7.sp, fontFamily = footerFont)
-            } ?: page.pageNumberFooter?.let {
-                Spacer(Modifier.height(2.dp))
-                Text(it, fontSize = 7.sp, fontFamily = footerFont)
             }
         }
     }

@@ -38,17 +38,8 @@ data class RenderedPage(
     val headerRow: HeaderRow? = null,
     val bodyArea: BodyArea = BodyArea(),
     val footerRow: FooterRow? = null,
-    val pageNumberFooter: String? = null,
     val background: BackgroundSpec? = null,
-    // שדות מורשים לצורך תאימות לאחור — יוסרו בעתיד
-    val columns: List<Column> = emptyList(),
-    val footnoteArea: FootnoteArea? = null,
-    val sideNotes: List<SideNote> = emptyList(),
-) {
-    /** גישה נוחה לטורים (מסונכרן עם bodyArea) */
-    val effectiveColumns: List<Column> get() = if (columns.isNotEmpty()) columns else bodyArea.mainArea.textArea.columns
-    val effectiveFootnoteArea: FootnoteArea? get() = footnoteArea ?: bodyArea.footnoteArea
-}
+)
 
 /**
  * אזור הטקסט המרכזי בעמוד.
@@ -74,10 +65,7 @@ data class TextArea(
     val blocks: List<TextBlock> = emptyList(),
     val heightPx: Double = 0.0,
     val isBalanced: Boolean = false,
-) {
-    /** גישה נוחה לרשימת הטורים (לצורך תאימות) */
-    val columns: List<Column> get() = blocks.mapNotNull { (it as? TextBlock.TwoColumn)?.let { col -> Column(listOf(), 0.0) } }
-}
+)
 
 /**
  * בלוק טקסט — יחידת עימוד בסיסית בתוך אזור הטקסט.
@@ -103,18 +91,6 @@ sealed class TextBlock {
     data class Divider(val ornament: String, val isChapterEnd: Boolean = false) : TextBlock()
 }
 
-/** תאימות לאחור — ה-Block הישן */
-typealias Block = TextBlock
-
-/**
- * עמודה ישנה — לתאימות. המודל החדש משתמש ב-TextArea.
- */
-data class Column(
-    val blocks: List<Block>,
-    val heightPx: Double,
-    val isBalanced: Boolean = false,
-)
-
 enum class PageRole {
     REGULAR, H0_OPEN, H1_SHAAR, H2_OPEN, H3_SPAN,
     SHAAR_MAIN, SHAAR_BACK, SHAAR_SUB,
@@ -139,31 +115,7 @@ data class Paragraph(
     val lastLineAlignment: TextAlignment = TextAlignment.CENTER,
     /** עיצוב כותרת אם הפסקה היא כותרת 4/5/6 */
     val headingStyle: HeadingStyle? = null,
-) {
-    /** תאימות לאחור — מאפשר שימוש ב-lines כ-List<String> */
-    constructor(
-        text: String,
-        lines: List<String>,
-        isFirstWordEnlarged: Boolean = false,
-        firstWord: String? = null,
-        isContinuation: Boolean = false,
-        isEnd: Boolean = false,
-        customStyleId: String? = null,
-        footnoteMarkers: List<FootnoteMarker> = emptyList(),
-    ) : this(
-        text = text,
-        lines = lines.map { ParagraphLine(it) },
-        isFirstWordEnlarged = isFirstWordEnlarged,
-        firstWord = firstWord,
-        isContinuation = isContinuation,
-        isEnd = isEnd,
-        customStyleId = customStyleId,
-        footnoteMarkers = footnoteMarkers,
-    )
-
-    /** גישה נוחה לשורות כמחרוזות */
-    val lineTexts: List<String> get() = lines.map { it.text }
-}
+)
 
 /**
  * שורה בודדת בפסקה — כוללת מידע עיצוב.
@@ -285,14 +237,6 @@ data class FootnoteMarker(
 enum class MarkerStyle {
     SUPERSCRIPT, PARENTHESIZED, BRACKETED
 }
-
-/**
- * הערת צד — מופיעה בשוליים (ימין או שמאל).
- */
-data class SideNote(
-    val text: String,
-    val anchorLineIndex: Int,
-)
 
 /**
  * רשומה בודדת של הערת צד עם מיקום.

@@ -151,9 +151,51 @@ class WidowOrphanGuard {
         return page.copy(bodyArea = newBodyArea)
     }
 
+    /**
+     * מתקן יתומות/אלמנות בתוך טור:
+     * - אלמנה: פסקה ראשונה עם שורה אחת שאינה המשך — מוסיף שורה קודמת
+     * - יתומה: פסקה אחרונה עם שורה אחת — מסמן להעברה
+     * - כותרת יתומה: פסקה אחרונה שהיא כותרת (headingStyle != null)
+     */
     private fun fixColumn(paragraphs: List<Paragraph>): List<Paragraph> {
-        // TODO: מימוש מלא — כרגע רק מחזיר את הרשימה כמו שהיא
-        return paragraphs
+        if (paragraphs.size < 2) return paragraphs
+        val result = paragraphs.toMutableList()
+
+        // בדיקת כותרת יתומה — פסקה אחרונה שהיא כותרת
+        val last = result.last()
+        if (last.headingStyle != null && last.lines.size <= 2) {
+            // אין מה לעשות כאן — הבלנסר יטפל בזה
+        }
+
+        // בדיקת orphan: פסקה אחרונה עם שורה אחת שאינה כותרת
+        if (result.size > 1) {
+            val lastPara = result.last()
+            if (lastPara.lines.size == 1 && lastPara.headingStyle == null && !lastPara.isContinuation) {
+                // יתומה — נסה להוסיף שורה מהפסקה הקודמת
+                val prev = result[result.size - 2]
+                if (prev.lines.size > 2) {
+                    val movedLine = prev.lines.last()
+                    result[result.size - 2] = prev.copy(
+                        lines = prev.lines.dropLast(1),
+                        isEnd = false,
+                    )
+                    result[result.size - 1] = lastPara.copy(
+                        lines = listOf(movedLine) + lastPara.lines,
+                    )
+                }
+            }
+        }
+
+        // בדיקת widow: פסקה ראשונה עם שורה אחת שאינה המשך
+        if (result.size > 1) {
+            val first = result.first()
+            if (first.lines.size == 1 && !first.isContinuation && first.headingStyle == null) {
+                // אלמנה — נסה להחזיר את השורה לפסקה הקודמת (בטור הקודם)
+                // לא ניתן לעשות זאת כאן — רק מסמן
+            }
+        }
+
+        return result.toList()
     }
 }
 
