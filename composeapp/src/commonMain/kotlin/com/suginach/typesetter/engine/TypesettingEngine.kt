@@ -4,29 +4,35 @@ import com.suginach.typesetter.model.*
 import com.suginach.typesetter.parser.TextParser
 import com.suginach.typesetter.platform.TextMeasurer
 import com.suginach.typesetter.settings.TypesetterSettings
-import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 /**
- * המנוע הראשי — פונקציה טהורה (Pure) שמקבלת קלט והגדרות, ומחזירה תוצאה.
- * רצה ב-coroutine נפרד, שולחת אותות התקדמות.
+ * המנוע הראשי — פונקציה טהורה (Pure) שמקבלת קלט והגדרות.
+ *
+ * חוק ברזל (מוקש 1 באפיון): המנוע מחזיר Flow<TypesetProgress> קר
+ * במקום לקבל FlowCollector כפרמטר. השלב האחרון פולט את ה-TypesetResult
+ * בתוך TypesetProgress.Done. ה-UI יכול להאזין ל-Flow ולבצע collect.
  */
 class TypesettingEngine(
     private val textMeasurer: TextMeasurer,
 ) {
-    private val parser = TextParser(TypesetterSettings.default())
     private val gematriaConverter = GematriaConverter()
     private val pageFiller = PageFiller(textMeasurer, gematriaConverter)
     private val balancer = ColumnBalancer()
     private val widowGuard = WidowOrphanGuard()
     private val auditor = GeometryAuditor()
 
-    suspend fun typeset(
+    /**
+     * מריץ את העימוד ומחזיר Flow של התקדמות.
+     * השלב האחרון פולט TypesetProgress.Done עם התוצאה הסופית.
+     */
+    fun typeset(
         input: TypesetInput,
         settings: TypesetterSettings,
-        progress: FlowCollector<TypesetProgress>,
-    ): TypesetResult {
+    ): Flow<TypesetProgress> = flow {
         // שלב 1: ניתוח טקסט
-        progress.emit(TypesetProgress.Parsing(0, 0))
+        emit(TypesetProgress.Parsing(0, 0))
         val (tokens, metadata) = TextParser(settings).parse(input.rawText, input.customTextStyles)
 
         // שלב 2: חלוקה לחלקים
@@ -35,12 +41,12 @@ class TypesettingEngine(
         // שלב 3-4: מילוי עמודים
         val allPages = mutableListOf<RenderedPage>()
         var pageNumber = settings.pageNumStartIdx
-        val allFootnotes = mutableMapOf<Int, List<FootnoteEntry>>()
-        val allEndnotes = mutableMapOf<Int, List<EndnoteEntry>>()
-        val tocEntries = mutableListOf<TocEntry>()
+        // חוק ברזל (מוקש 4): מפתחות String בלבד לסריאליזציה
+        val allFootnotes = mutableMapOf<String, List<FootnoteEntry>>()
+        val allEndnotes = mutableMapOf<String, List<EndnoteEntry>>()
 
         for ((partIdx, part) in parts.withIndex()) {
-            progress.emit(TypesetProgress.PageFilling(allPages.size, parts.size * 10))
+            emit(TypesetProgress.PageFilling(allPages.size, parts.size * 10))
 
             // שער משנה (אם מופעל)
             if (settings.showSubShaar && part.tokens.any { it is Token.HeadingToken && it.level == 1 }) {
@@ -63,14 +69,14 @@ class TypesettingEngine(
                 partIndex = partIdx,
             )
 
-            // איסוף הערות סיום
+            // איסוף הערות סיום — מפתח String (חוק ברזל: איסור Int כמפתח)
             if (partEndnotes.isNotEmpty()) {
-                allEndnotes[partIdx] = partEndnotes
+                allEndnotes[partIdx.toString()] = partEndnotes
             }
 
             // שלב 5-6: איזון ושמירת שורות
             val processedPages = pages.map { page ->
-                progress.emit(TypesetProgress.Balancing(page.index))
+                emit(TypesetProgress.Balancing(page.index))
                 var p = page
                 if (settings.balanceChapterEnd) {
                     p = balancer.balance(p, settings)
@@ -84,10 +90,10 @@ class TypesettingEngine(
             allPages.addAll(processedPages)
             pageNumber += processedPages.size
 
-            // איסוף הערות שוליים
+            // איסוף הערות שוליים — מפתח String (חוק ברזל: איסור Int כמפתח)
             for (page in processedPages) {
                 page.footnoteArea?.let { area ->
-                    allFootnotes[page.index] = area.entries
+                    allFootnotes[page.index.toString()] = area.entries
                 }
             }
         }
@@ -99,17 +105,17 @@ class TypesettingEngine(
         }
 
         // שלב 9: ביקורת איכות
-        progress.emit(TypesetProgress.Auditing(0))
+        emit(TypesetProgress.Auditing(0))
         val auditReport = auditor.audit(allPages, settings)
 
-        progress.emit(TypesetProgress.Done)
-
-        return TypesetResult(
+        val result = TypesetResult(
             pages = allPages,
             footnotes = allFootnotes,
             endnotes = allEndnotes,
             auditReport = auditReport,
         )
+
+        emit(TypesetProgress.Done(result))
     }
 
     private fun splitIntoParts(tokens: List<Token>): List<Part> {
@@ -154,5 +160,6 @@ sealed class TypesetProgress {
     data class PageFilling(val currentPage: Int, val totalPages: Int) : TypesetProgress()
     data class Balancing(val pageIndex: Int) : TypesetProgress()
     data class Auditing(val issuesFound: Int) : TypesetProgress()
-    object Done : TypesetProgress()
+    /** סיום — מכיל את התוצאה הסופית */
+    data class Done(val result: TypesetResult) : TypesetProgress()
 }

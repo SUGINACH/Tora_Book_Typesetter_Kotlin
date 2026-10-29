@@ -20,7 +20,7 @@ import com.suginach.typesetter.engine.TypesettingEngine
 import com.suginach.typesetter.engine.TypesetProgress
 import com.suginach.typesetter.platform.WasmJsTextMeasurer
 import com.suginach.typesetter.settings.TypesetterSettings
-import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -108,17 +108,23 @@ fun App() {
                                 val input = TypesetInput(rawText = rawText)
                                 // צלם את ההגדרות לפני העימוד כדי למנוע מרוץ (חוק 7)
                                 val settingsSnapshot = settings
+                                // מוקש 1: המנוע מחזיר Flow<TypesetProgress> קר
+                                // אנחנו עושים collect על Dispatchers.Default
                                 val result = withContext(Dispatchers.Default) {
-                                    engine.typeset(input, settingsSnapshot) { progress ->
-                                        // עדכון progressText חייב לחזור ל-Main thread
+                                    var finalResult: TypesetResult? = null
+                                    engine.typeset(input, settingsSnapshot).collect { progress ->
                                         progressText = when (progress) {
                                             is TypesetProgress.Parsing -> "מנתח טקסט... ${progress.linesProcessed}/${progress.totalLines}"
                                             is TypesetProgress.PageFilling -> "מעמד עמוד ${progress.currentPage}/${progress.totalPages}"
                                             is TypesetProgress.Balancing -> "מאזן עמוד ${progress.pageIndex}"
                                             is TypesetProgress.Auditing -> "בודק איכות... נמצאו ${progress.issuesFound} בעיות"
-                                            TypesetProgress.Done -> "הושלם!"
+                                            is TypesetProgress.Done -> {
+                                                finalResult = progress.result
+                                                "הושלם!"
+                                            }
                                         }
                                     }
+                                    finalResult!!
                                 }
                                 // חזרה ל-Main thread לעדכון ה-UI
                                 typesetResult = result

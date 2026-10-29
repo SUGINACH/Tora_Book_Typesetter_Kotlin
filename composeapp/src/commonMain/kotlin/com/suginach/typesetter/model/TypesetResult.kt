@@ -2,11 +2,15 @@ package com.suginach.typesetter.model
 
 /**
  * תוצאת העימוד — רשימת עמודים + דוח ביקורת
+ *
+ * חוק ברזל (מוקש 4): כל המפות משתמשות ב-String כמפתח כדי למנוע
+ * קריסות סריאליזציה ב-wasmJs (kotlinx.serialization לא מטפל היטב
+ * ב-Int keys ב-Web).
  */
 data class TypesetResult(
     val pages: List<RenderedPage>,
-    val footnotes: Map<Int, List<FootnoteEntry>> = emptyMap(),
-    val endnotes: Map<Int, List<EndnoteEntry>> = emptyMap(),
+    val footnotes: Map<String, List<FootnoteEntry>> = emptyMap(),
+    val endnotes: Map<String, List<EndnoteEntry>> = emptyMap(),
     val tableOfContents: TocEntry? = null,
     val auditReport: AuditReport = AuditReport(emptyList()),
     val warnings: List<TypesetWarning> = emptyList(),

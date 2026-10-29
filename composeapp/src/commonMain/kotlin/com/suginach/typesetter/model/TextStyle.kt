@@ -12,7 +12,7 @@ data class TextStyleDefinition(
     val name: String,
     val trigger: TextTrigger,
     val style: TextStyleProperties = TextStyleProperties(),
-    val layoutMode: LayoutMode = LayoutMode.INLINE,
+    val layoutMode: String = "inline", // מזהה פריסה כ-String לסריאליזציה גמישה
     val noteConfig: NoteConfig? = null,
     val resetAt: String? = null,
 )
@@ -45,13 +45,42 @@ data class TextStyleProperties(
     val marginLeft: Double = 0.0,
 )
 
-enum class LayoutMode {
-    INLINE,              // בתוך הטור הרגיל
-    SINGLE_COLUMN_WIDE,  // חוצה טורים (כמו כותרת 3)
-    SIDE_NOTE,           // בשוליים (כמו כותרת 7)
-    FOOTNOTE,            // בתחתית העמוד
-    ENDNOTE,             // בסוף החלק
-    NEW_LOCATION,        // יצירת מיקום חדש
+/**
+ * מוקש 2 באפיון: LayoutMode כ-sealed class במקום enum class
+ * כדי לאפשר הרחבת פריסות דינמית ללא קומפילציה מחדש.
+ *
+ * המשתמש יכול להוסיף פריסות חדשות דרך Custom LayoutMode
+ * עם id ייחודי ופרמטרים מותאמים אישית.
+ */
+sealed class LayoutMode {
+    /** בתוך הטור הרגיל */
+    data object Inline : LayoutMode()
+    /** חוצה טורים (כמו כותרת 3) */
+    data object SingleColumnWide : LayoutMode()
+    /** בשוליים (כמו כותרת 7) */
+    data object SideNote : LayoutMode()
+    /** בתחתית העמוד */
+    data object Footnote : LayoutMode()
+    /** בסוף החלק */
+    data object Endnote : LayoutMode()
+    /** יצירת מיקום חדש */
+    data object NewLocation : LayoutMode()
+    /** פריסה מותאמת אישית — מאפשרת הרחבה דינמית */
+    data class Custom(val id: String, val params: Map<String, String> = emptyMap()) : LayoutMode()
+
+    companion object {
+        /** רישום דינמי של פריסות מותאמות אישית */
+        private val customRegistry = mutableMapOf<String, LayoutMode>()
+
+        fun register(id: String, mode: LayoutMode) {
+            customRegistry[id] = mode
+        }
+
+        fun getCustom(id: String): LayoutMode? = customRegistry[id]
+
+        /** ברירת מחדל — Inline */
+        val DEFAULT: LayoutMode = Inline
+    }
 }
 
 @Serializable
