@@ -208,7 +208,8 @@ class PageFiller(
 
                     val isFirstWord = lines.size >= settings.firstWordMinLines && settings.firstWordMode != "none"
                     val firstWord = if (isFirstWord) {
-                        displayText.split(Regex("\\s+")).take(settings.firstWordCount).joinToString(" ")
+                        // חוק 2: פיצול לפי רווחים ללא Regex
+                        splitByWhitespace(displayText).take(settings.firstWordCount).joinToString(" ")
                     } else null
 
                     val firstWordStyle = if (isFirstWord) {
@@ -325,6 +326,28 @@ class PageFiller(
     private fun calcBodyHeightPx(settings: TypesetterSettings): Double {
         val pageHeightPx = settings.pageSizeHeight * 3.7795
         return pageHeightPx - (settings.propMt + settings.propMb) * 3.7795
+    }
+
+    /**
+     * חוק 2: פיצול טקסט לפי רווחים (space, tab, newline) ללא Regex.
+     */
+    private fun splitByWhitespace(text: String): List<String> {
+        val result = mutableListOf<String>()
+        val current = StringBuilder()
+        for (c in text) {
+            if (c.isWhitespace()) {
+                if (current.isNotEmpty()) {
+                    result.add(current.toString())
+                    current.clear()
+                }
+            } else {
+                current.append(c)
+            }
+        }
+        if (current.isNotEmpty()) {
+            result.add(current.toString())
+        }
+        return result
     }
 
     private fun createHeading(token: Token.HeadingToken, settings: TypesetterSettings): Heading {

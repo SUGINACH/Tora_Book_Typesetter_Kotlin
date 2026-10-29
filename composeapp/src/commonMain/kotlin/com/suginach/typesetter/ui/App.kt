@@ -22,6 +22,8 @@ import com.suginach.typesetter.platform.WasmJsTextMeasurer
 import com.suginach.typesetter.settings.TypesetterSettings
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.compose.resources.Font
 import com.suginach.typesetter.composeapp.generated.resources.Res
 import com.suginach.typesetter.composeapp.generated.resources.frankruehl_regular
@@ -90,17 +92,25 @@ fun App() {
                         if (rawText.isNotBlank() && !isTypesetting) {
                             isTypesetting = true
                             progressText = "מתחיל..."
+                            // חוק 4: העימוד רץ ברקע על Dispatchers.Default
+                            // כדי למנוע קפיאת UI ב-Windows וב-Web
                             scope.launch {
                                 val input = TypesetInput(rawText = rawText)
-                                val result = engine.typeset(input, settings) { progress ->
-                                    progressText = when (progress) {
-                                        is TypesetProgress.Parsing -> "מנתח טקסט... ${progress.linesProcessed}/${progress.totalLines}"
-                                        is TypesetProgress.PageFilling -> "מעמד עמוד ${progress.currentPage}/${progress.totalPages}"
-                                        is TypesetProgress.Balancing -> "מאזן עמוד ${progress.pageIndex}"
-                                        is TypesetProgress.Auditing -> "בודק איכות... נמצאו ${progress.issuesFound} בעיות"
-                                        TypesetProgress.Done -> "הושלם!"
+                                // צלם את ההגדרות לפני העימוד כדי למנוע מרוץ (חוק 7)
+                                val settingsSnapshot = settings
+                                val result = withContext(Dispatchers.Default) {
+                                    engine.typeset(input, settingsSnapshot) { progress ->
+                                        // עדכון progressText חייב לחזור ל-Main thread
+                                        progressText = when (progress) {
+                                            is TypesetProgress.Parsing -> "מנתח טקסט... ${progress.linesProcessed}/${progress.totalLines}"
+                                            is TypesetProgress.PageFilling -> "מעמד עמוד ${progress.currentPage}/${progress.totalPages}"
+                                            is TypesetProgress.Balancing -> "מאזן עמוד ${progress.pageIndex}"
+                                            is TypesetProgress.Auditing -> "בודק איכות... נמצאו ${progress.issuesFound} בעיות"
+                                            TypesetProgress.Done -> "הושלם!"
+                                        }
                                     }
                                 }
+                                // חזרה ל-Main thread לעדכון ה-UI
                                 typesetResult = result
                                 isTypesetting = false
                                 progressText = ""

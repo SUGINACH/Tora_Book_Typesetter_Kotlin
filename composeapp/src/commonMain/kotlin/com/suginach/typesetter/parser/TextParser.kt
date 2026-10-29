@@ -16,8 +16,14 @@ import com.suginach.typesetter.settings.TypesetterSettings
  */
 class TextParser(private val settings: TypesetterSettings) {
 
-    private val headingRegex = Regex("""^כותרת\s*(\d+)\s*[-–—]\s*(.+)$""")
-    private val editorialNoteRegex = Regex("""##.+?##""")
+    /**
+     * חוק 2: איסור Regex מורכב — מנוע ה-Regex של ג'אווה בדסקטופ
+     * ושל דפדפנים ב-Wasm מתנהגים אחרת. שימוש ב-Lookbehind או יוניקוד
+     * מורכב יקרוס בזמן ריצה בדפדפן. לכן כל הפרסור מתבצע עם
+     * startsWith/removePrefix/split בלבד.
+     */
+    private val headingPrefix = "כותרת"
+    private val editorialNoteMarker = "##"
 
     fun parse(rawText: String, customStyles: List<TextStyleDefinition> = emptyList()): Pair<List<Token>, BookMetadata> {
         val lines = rawText.replace("\r\n", "\n").split("\n")
@@ -29,8 +35,8 @@ class TextParser(private val settings: TypesetterSettings) {
         for ((index, line) in lines.withIndex()) {
             val trimmed = line.trim()
 
-            // ניקוי הערות עריכה
-            val cleanedLine = editorialNoteRegex.replace(trimmed, "").trim()
+            // ניקוי הערות עריכה — ##...## מוסרות לחלוטין (ללא Regex)
+            val cleanedLine = removeEditorialNotes(trimmed).trim()
             if (cleanedLine.isEmpty()) {
                 if (inMetadata && metadata.isNotEmpty()) {
                     metadataEnded = true
@@ -49,11 +55,10 @@ class TextParser(private val settings: TypesetterSettings) {
                 }
             }
 
-            // זיהוי כותרת
-            val headingMatch = headingRegex.find(cleanedLine)
+            // זיהוי כותרת — "כותרת N - <text>" ללא Regex
+            val headingMatch = parseHeading(cleanedLine)
             if (headingMatch != null) {
-                val level = headingMatch.groupValues[1].toIntOrNull() ?: continue
-                val text = headingMatch.groupValues[2].trim()
+                val (level, text) = headingMatch
                 tokens.add(Token.HeadingToken(index, level, text))
                 continue
             }
@@ -61,7 +66,8 @@ class TextParser(private val settings: TypesetterSettings) {
             // זיהוי הערת סיום
             if (cleanedLine.startsWith(settings.endnotePrefix)) {
                 val endnoteText = cleanedLine.removePrefix(settings.endnotePrefix)
-                    .replace(Regex("^[:\\-–—]\\s*"), "").trim()
+                    .let { removeLeadingSeparators(it) }
+                    .trim()
                 tokens.add(Token.ParagraphToken(
                     lineIndex = index,
                     rawText = "",
@@ -111,24 +117,137 @@ class TextParser(private val settings: TypesetterSettings) {
         return Pair(tokens.toList(), bookMetadata)
     }
 
-    private val metadataPatterns = mapOf(
-        "title" to Regex("""^(?:שם הספר[:\s]*)?שם הספר\s*[-–—:]\s*(.+)$"""),
-        "subtitle" to Regex("""^(?:נושא(?:\\|/)כותרת משנה[:\s]*)?נושא\s*[-–—:]\s*(.+)$"""),
-        "description" to Regex("""^(?:נושא מפורט(?:\\|/)תיאור[:\s]*)?נושא מפורט\s*[-–—:]\s*(.+)$"""),
-        "sections" to Regex("""^(?:פרטי מהדורא(?:\\|/)חלקים[:\s]*)?פרטי מהדורא\s*[-–—:]\s*(.+)$"""),
-        "author" to Regex("""^(?:שם המחבר[:\s]*)?שם המחבר\s*[-–—:]\s*(.+)$"""),
-        "year" to Regex("""^(?:מקום ושנת הוצאה[:\s]*)?מקום ושנת הוצאה\s*[-–—:]\s*(.+)$"""),
-        "backCopyright" to Regex("""^(?:שמירת זכויות[:\s]*)?שמירת זכויות\s*[-–—:]\s*(.+)$"""),
-        "backPublishing" to Regex("""^(?:פרטי הוצאה לאור[:\s]*)?פרטי הוצאה לאור\s*[-–—:]\s*(.+)$"""),
-        "backContact" to Regex("""^(?:פרטי קשר[:\s]*)?פרטי קשר\s*[-–—:]\s*(.+)$"""),
-        "backExtra" to Regex("""^(?:פרטים נוספים[:\s]*)?פרטים נוספים\s*[-–—:]\s*(.+)$"""),
+    /**
+     * זיהוי כותרת "כותרת N - <text>" ללא Regex.
+     * פורמט: "כותרת" + רווחים אופציונליים + מספר + רווחים + מקף (- – —) + רווחים + טקסט
+     */
+    private fun parseHeading(line: String): Pair<Int, String>? {
+        if (!line.startsWith(headingPrefix)) return null
+        var rest = line.removePrefix(headingPrefix)
+
+        // דילוג על רווחים
+        rest = rest.trimStart()
+        if (rest.isEmpty()) return null
+
+        // חילוץ המספר
+        val numEnd = rest.indexOfFirst { !it.isDigit() }
+        if (numEnd <= 0) return null
+        val level = rest.substring(0, numEnd).toIntOrNull() ?: return null
+        rest = rest.substring(numEnd)
+
+        // דילוג על רווחים
+        rest = rest.trimStart()
+        if (rest.isEmpty()) return null
+
+        // חילוץ המקף (- – —)
+        val firstChar = rest.first()
+        if (firstChar != '-' && firstChar != '–' && firstChar != '—') return null
+        rest = rest.substring(1)
+
+        // דילוג על רווחים והחזרת הטקסט
+        val text = rest.trimStart()
+        if (text.isEmpty()) return null
+
+        return Pair(level, text)
+    }
+
+    /**
+     * הסרת הערות עריכה ##...## ללא Regex.
+     * עובר שורה-שורה ומסיר תוכן בין ## ל-##.
+     */
+    private fun removeEditorialNotes(text: String): String {
+        val result = StringBuilder()
+        var i = 0
+        while (i < text.length) {
+            if (i + 1 < text.length && text[i] == '#' && text[i + 1] == '#') {
+                // חיפוש ה-## הבא
+                val closeIdx = findSubstring(text, editorialNoteMarker, i + 2)
+                if (closeIdx >= 0) {
+                    // דלג על התוכן בין ## ל-##
+                    i = closeIdx + 2
+                } else {
+                    // אין סגירה — נשאר כפי שהוא
+                    result.append(text[i])
+                    i++
+                }
+            } else {
+                result.append(text[i])
+                i++
+            }
+        }
+        return result.toString()
+    }
+
+    /**
+     * חיפוש תת-מחרוזת ללא Regex.
+     */
+    private fun findSubstring(text: String, sub: String, fromIndex: Int): Int {
+        if (sub.isEmpty()) return fromIndex
+        for (i in fromIndex..text.length - sub.length) {
+            var match = true
+            for (j in sub.indices) {
+                if (text[i + j] != sub[j]) {
+                    match = false
+                    break
+                }
+            }
+            if (match) return i
+        }
+        return -1
+    }
+
+    /**
+     * הסרת מפרידים מובילים (: - – —) ורווחים ללא Regex.
+     */
+    private fun removeLeadingSeparators(text: String): String {
+        var i = 0
+        while (i < text.length) {
+            val c = text[i]
+            if (c == ':' || c == '-' || c == '–' || c == '—' || c.isWhitespace()) {
+                i++
+            } else {
+                break
+            }
+        }
+        return if (i < text.length) text.substring(i) else ""
+    }
+
+    /**
+     * Metadata keys והקידומות שלהם — ללא Regex.
+     */
+    private val metadataKeys = listOf(
+        "title" to listOf("שם הספר"),
+        "subtitle" to listOf("נושא"),
+        "description" to listOf("נושא מפורט"),
+        "sections" to listOf("פרטי מהדורא"),
+        "author" to listOf("שם המחבר"),
+        "year" to listOf("מקום ושנת הוצאה"),
+        "backCopyright" to listOf("שמירת זכויות"),
+        "backPublishing" to listOf("פרטי הוצאה לאור"),
+        "backContact" to listOf("פרטי קשר"),
+        "backExtra" to listOf("פרטים נוספים"),
     )
 
     private fun parseMetadataLine(line: String): Pair<String, String>? {
-        for ((key, regex) in metadataPatterns) {
-            val match = regex.find(line)
-            if (match != null) {
-                return Pair(key, match.groupValues[1].trim())
+        for ((key, prefixes) in metadataKeys) {
+            for (prefix in prefixes) {
+                if (line.startsWith(prefix)) {
+                    var rest = line.removePrefix(prefix).trimStart()
+                    // דילוג על תווי ":" אופציונליים
+                    if (rest.startsWith(":")) {
+                        rest = rest.removePrefix(":").trimStart()
+                    }
+                    // דילוג על מקף (- – —)
+                    if (rest.isNotEmpty()) {
+                        val first = rest.first()
+                        if (first == '-' || first == '–' || first == '—') {
+                            rest = rest.substring(1).trimStart()
+                        }
+                    }
+                    if (rest.isNotEmpty()) {
+                        return Pair(key, rest)
+                    }
+                }
             }
         }
         return null

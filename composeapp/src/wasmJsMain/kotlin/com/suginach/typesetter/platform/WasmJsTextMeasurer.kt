@@ -25,7 +25,8 @@ actual class WasmJsTextMeasurer : TextMeasurer {
     ): List<String> {
         val avgCharWidth = fontSizePt * 0.55
         val charsPerLine = (colWidthPx / avgCharWidth).toInt().coerceAtLeast(10)
-        val words = text.split(Regex("\\s+")).filter { it.isNotBlank() }
+        // חוק 2: פיצול לפי רווחים ללא Regex — שימוש ב-split עם רווח יחיד
+        val words = splitByWhitespace(text).filter { it.isNotEmpty() }
         if (words.isEmpty()) return emptyList()
 
         val lines = mutableListOf<String>()
@@ -50,5 +51,27 @@ actual class WasmJsTextMeasurer : TextMeasurer {
             lines.add(currentLine.toString())
         }
         return lines
+    }
+
+    /**
+     * פיצול טקסט לפי רווחים (space, tab, newline) ללא Regex.
+     */
+    private fun splitByWhitespace(text: String): List<String> {
+        val result = mutableListOf<String>()
+        val current = StringBuilder()
+        for (c in text) {
+            if (c.isWhitespace()) {
+                if (current.isNotEmpty()) {
+                    result.add(current.toString())
+                    current.clear()
+                }
+            } else {
+                current.append(c)
+            }
+        }
+        if (current.isNotEmpty()) {
+            result.add(current.toString())
+        }
+        return result
     }
 }
