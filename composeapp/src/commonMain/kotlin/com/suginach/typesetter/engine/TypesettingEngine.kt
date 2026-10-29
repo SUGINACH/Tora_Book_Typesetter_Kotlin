@@ -123,6 +123,14 @@ class TypesettingEngine(
             buildTableOfContents(parts, allPages, settings)
         } else null
 
+        // יצירת עמודי תוכן עניינים מעומדים (אם מופעל)
+        if (tocEntry != null) {
+            val tocPages = createTocPages(tocEntry, settings)
+            // הוספת עמודי TOC אחרי השער הראשי (אם יש)
+            val insertIndex = if (settings.showMainShaar) 1 else 0
+            allPages.addAll(insertIndex, tocPages)
+        }
+
         // שלב 9: ביקורת איכות
         emit(TypesetProgress.Auditing(0))
         val auditReport = auditor.audit(allPages, settings)
@@ -142,6 +150,81 @@ class TypesettingEngine(
      * בונה תוכן עניינים מתוך הכותרות שנמצאו בטקסט.
      * משתמש במספרי העמודים שהוקצו לכל כותרת.
      */
+    /**
+     * יוצר עמודי תוכן עניינים מעומדים מתוך עץ TocEntry.
+     * כל עמוד מכיל כותרת "תוכן עניינים" ורשימת כותרות עם מספרי עמודים.
+     */
+    private fun createTocPages(tocEntry: TocEntry, settings: TypesetterSettings): List<RenderedPage> {
+        val pages = mutableListOf<RenderedPage>()
+
+        // בניית פסקאות תוכן העניינים
+        val tocParagraphs = mutableListOf<Paragraph>()
+
+        // כותרת "תוכן עניינים"
+        tocParagraphs.add(Paragraph(
+            text = "תוכן עניינים",
+            lines = listOf(ParagraphLine("תוכן עניינים", isFirstLine = true, isLastLine = true, alignment = TextAlignment.CENTER)),
+            headingStyle = HeadingStyle(level = 0, fontSizePt = 24, isBold = true, spaceBeforePt = 20, spaceAfterPt = 30, alignment = TextAlignment.CENTER),
+        ))
+
+        // רשימת כותרות עם מספרי עמודים
+        for (child in tocEntry.children) {
+            // כותרת רמה 1
+            val titleLine = if (child.pageNumber.isNotEmpty()) {
+                "${child.title} ${child.pageNumber}"
+            } else {
+                child.title
+            }
+            tocParagraphs.add(Paragraph(
+                text = titleLine,
+                lines = listOf(ParagraphLine(titleLine, isFirstLine = true, isLastLine = true, alignment = TextAlignment.RIGHT)),
+                headingStyle = HeadingStyle(level = 1, fontSizePt = 14, isBold = true, spaceBeforePt = 6, spaceAfterPt = 3, alignment = TextAlignment.RIGHT),
+            ))
+
+            // כותרות משנה (רמות 2-3)
+            for (subChild in child.children) {
+                val subTitleLine = if (subChild.pageNumber.isNotEmpty()) {
+                    "${subChild.title} ${subChild.pageNumber}"
+                } else {
+                    subChild.title
+                }
+                val indent = if (subChild.level == 2) "    " else "        "
+                tocParagraphs.add(Paragraph(
+                    text = indent + subTitleLine,
+                    lines = listOf(ParagraphLine(indent + subTitleLine, isFirstLine = true, isLastLine = true, alignment = TextAlignment.RIGHT)),
+                    headingStyle = HeadingStyle(level = subChild.level, fontSizePt = 12, isBold = false, spaceBeforePt = 2, spaceAfterPt = 2, alignment = TextAlignment.RIGHT),
+                ))
+            }
+        }
+
+        // חלוקה לעמודים — כ-30 שורות לעמוד
+        val maxLinesPerPage = 30
+        val allParagraphs = tocParagraphs.toList()
+        var pageNum = 0
+
+        var startIdx = 0
+        while (startIdx < allParagraphs.size) {
+            val endIdx = minOf(startIdx + maxLinesPerPage, allParagraphs.size)
+            val pageParagraphs = allParagraphs.subList(startIdx, endIdx).toList()
+
+            val textArea = TextArea(blocks = listOf(TextBlock.SingleColumn(pageParagraphs)))
+            val mainArea = MainArea(textArea = textArea)
+            val bodyArea = BodyArea(mainArea = mainArea)
+
+            pages.add(RenderedPage(
+                index = pageNum,
+                pageNumber = if (pageNum == 0) "" else gematriaConverter.toGematria(pageNum),
+                role = if (pageNum == 0) PageRole.TOC_GENERAL else PageRole.TOC_DETAILED,
+                bodyArea = bodyArea,
+            ))
+
+            startIdx = endIdx
+            pageNum++
+        }
+
+        return pages
+    }
+
     private fun buildTableOfContents(
         parts: List<Part>,
         pages: List<RenderedPage>,
