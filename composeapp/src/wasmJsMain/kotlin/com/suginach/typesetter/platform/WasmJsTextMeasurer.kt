@@ -8,11 +8,14 @@ import org.w3c.dom.HTMLCanvasElement
  *
  * משתמש ב-context.measureText() של HTML5 Canvas למדידה מדויקת
  * של רוחב טקסט בפיקסלים, כולל התחשבות בפונט, גודל, ומשקל.
+ *
+ * ב-wasmJs אנחנו משתמשים ב-@JsFun כדי לגשת ל-Canvas 2D API
+ * כי הטיפוס 'dynamic' לא נתמך ב-wasmJs.
  */
-actual class WasmJsTextMeasurer : TextMeasurer {
-    private val canvas = document.createElement("canvas") as HTMLCanvasElement
-    private val ctx: dynamic = canvas.getContext("2d")
+@JsFun("(text, fontFamily, fontSizePt, fontWeight) => { var canvas = document.createElement('canvas'); var ctx = canvas.getContext('2d'); var weight = (fontWeight === 'bold' || fontWeight === '700') ? 'bold' : 'normal'; ctx.font = weight + ' ' + fontSizePt + 'px ' + fontFamily + ', sans-serif'; return ctx.measureText(text).width; }")
+private external fun canvasMeasureText(text: String, fontFamily: String, fontSizePt: Int, fontWeight: String): Double
 
+actual class WasmJsTextMeasurer : TextMeasurer {
     // Cache למדידות — מונע מדידות חוזרות של אותה מילה
     private val widthCache = mutableMapOf<String, Double>()
 
@@ -20,13 +23,8 @@ actual class WasmJsTextMeasurer : TextMeasurer {
         val cacheKey = "$text|$fontFamily|$fontSizePt|$fontWeight"
         widthCache[cacheKey]?.let { return it }
 
-        // הגדרת הפונט ב-context
-        val weight = if (fontWeight == "bold" || fontWeight == "700") "bold" else "normal"
-        ctx.font = "$weight ${fontSizePt}px $fontFamily, sans-serif"
-
         // מדידה אמיתית דרך Canvas API
-        val metrics = ctx.measureText(text)
-        val width: Double = metrics.width as Double
+        val width = canvasMeasureText(text, fontFamily, fontSizePt, fontWeight)
 
         widthCache[cacheKey] = width
         return width
