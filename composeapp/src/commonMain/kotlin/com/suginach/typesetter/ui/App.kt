@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import com.suginach.typesetter.model.*
 import com.suginach.typesetter.settings.TypesetterSettings
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.Font
 import com.suginach.typesetter.composeapp.generated.resources.Res
 import com.suginach.typesetter.composeapp.generated.resources.frankruehl_regular

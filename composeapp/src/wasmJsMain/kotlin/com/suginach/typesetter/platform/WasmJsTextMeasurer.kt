@@ -2,26 +2,16 @@ package com.suginach.typesetter.platform
 
 import kotlinx.browser.document
 import org.w3c.dom.HTMLCanvasElement
-import org.w3c.dom.canvas.CanvasRenderingContext2D
-import org.w3c.dom.canvas.ContextType2D
-import kotlin.js.json
 
 /**
  * מדידת טקסט אמיתית דרך Canvas 2D API.
  *
  * משתמש ב-context.measureText() של HTML5 Canvas למדידה מדויקת
  * של רוחב טקסט בפיקסלים, כולל התחשבות בפונט, גודל, ומשקל.
- *
- * חוק ברזל (מוקש 2 באפיון): מדידת רוחב האותיות והמילים לצורך
- * אלגוריתם שבירת השורות תתבצע ב-commonMain באמצעות TextMeasurer
- * המסתמך על קובץ ה-Font Asset.
- *
- * המדידה מתבצעת על Main thread (Canvas API), אבל התוצאות נשמרות
- * ב-cache פנימי כדי למנוע מדידות חוזרות.
  */
 actual class WasmJsTextMeasurer : TextMeasurer {
     private val canvas = document.createElement("canvas") as HTMLCanvasElement
-    private val ctx: CanvasRenderingContext2D = canvas.getContext(ContextType2D.string) as CanvasRenderingContext2D
+    private val ctx: dynamic = canvas.getContext("2d")
 
     // Cache למדידות — מונע מדידות חוזרות של אותה מילה
     private val widthCache = mutableMapOf<String, Double>()
@@ -36,7 +26,7 @@ actual class WasmJsTextMeasurer : TextMeasurer {
 
         // מדידה אמיתית דרך Canvas API
         val metrics = ctx.measureText(text)
-        val width = metrics.width
+        val width: Double = metrics.width as Double
 
         widthCache[cacheKey] = width
         return width
